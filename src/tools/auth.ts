@@ -38,15 +38,18 @@ Examples:
       try {
         const pb = getClient();
         
-        // Authenticate as admin
-        const authData = await pb.admins.authWithPassword(params.email, params.password);
+        // Authenticate as superuser (PocketBase v0.21+ uses _superusers collection)
+        const authData = await pb.collection('_superusers').authWithPassword(
+          params.email,
+          params.password
+        );
         
         const output = {
           success: true,
           authType: 'admin' as const,
           admin: {
-            id: authData.admin.id,
-            email: authData.admin.email,
+            id: authData.record.id,
+            email: authData.record.email,
           },
           tokenExpiry: null, // SDK doesn't expose expiry
         };

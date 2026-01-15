@@ -155,7 +155,8 @@ Examples:
         const collectionData = {
           name: params.name,
           type: params.type,
-          schema: params.fields.map(f => ({
+          // PocketBase v0.21+ uses 'fields' instead of 'schema'
+          fields: params.fields.map(f => ({
             name: f.name,
             type: f.type,
             required: f.required,
@@ -220,7 +221,8 @@ Examples:
         
         if (params.newName) updateData.name = params.newName;
         if (params.fields) {
-          updateData.schema = params.fields.map(f => ({
+          // PocketBase v0.21+ uses 'fields' instead of 'schema'
+          updateData.fields = params.fields.map(f => ({
             name: f.name,
             type: f.type,
             required: f.required,

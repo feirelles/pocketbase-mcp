@@ -162,7 +162,7 @@
 - [x] T054 [P] Add unit tests for PocketBase service in tests/unit/services.test.ts
 - [x] T055 Verify all tools build without errors (npm run build)
 - [x] T056 Test with MCP Inspector: npx @modelcontextprotocol/inspector
-- [ ] T057 Run quickstart.md validation (manual test against real PocketBase)
+- [x] T057 Run quickstart.md validation (manual test against real PocketBase)
 
 ---
 

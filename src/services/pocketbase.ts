@@ -41,9 +41,12 @@ export function getAuthState(): AuthState {
   const pb = getClient();
   const model = pb.authStore.model;
   
+  // In PocketBase v0.21+, superusers are in _superusers collection
+  const isSuperuser = model?.collectionName === '_superusers' || pb.authStore.isAdmin;
+  
   return {
     isAuthenticated: pb.authStore.isValid,
-    authType: pb.authStore.isAdmin ? 'admin' : (model ? 'user' : null),
+    authType: isSuperuser ? 'admin' : (model ? 'user' : null),
     model: model ? {
       id: model.id as string,
       email: (model.email ?? model.username ?? '') as string,
@@ -55,12 +58,15 @@ export function getAuthState(): AuthState {
 }
 
 /**
- * Check if current auth is admin
+ * Check if current auth is admin/superuser
  * @throws ErrorResponse if not authenticated as admin
  */
 export function requireAdminAuth(): void {
   const pb = getClient();
-  if (!pb.authStore.isAdmin) {
+  const model = pb.authStore.model;
+  const isSuperuser = model?.collectionName === '_superusers' || pb.authStore.isAdmin;
+  
+  if (!isSuperuser) {
     throw createErrorResponse(
       ErrorCodes.AUTH_REQUIRED,
       'Admin authentication required for this operation',
