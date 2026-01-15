@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  pocketbase:
+    image: ghcr.io/pocketbase/pocketbase:latest
+    command:
+      - serve
+      - --http=0.0.0.0:8090
+    container_name: pocketbase
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
+    environment:
+      - PB_PUBLIC_DIR=/pb/public
+
+  # Optional: Add a reverse proxy (Caddy)
+  caddy:
+    image: caddy:2
+    container_name: pocketbase-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - pocketbase
+
+volumes:
+  caddy_data:
+  caddy_config:

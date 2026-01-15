@@ -1,0 +1,46 @@
+{
+  "name": "pocketbase-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for PocketBase - query and administration via AI agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "pocketbase-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "pocketbase",
+    "model-context-protocol",
+    "ai",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "pocketbase": "^0.21.0",
+    "@iarna/toml": "^3.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "vitest": "^2.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0"
+  }
+}

@@ -1,0 +1,27 @@
+# PocketBase Caddy Configuration
+# This provides automatic HTTPS and reverse proxy
+
+yourdomain.com {
+    # Redirect HTTP to HTTPS
+    redir https://{host}{uri} permanent
+
+    # Proxy to PocketBase
+    reverse_proxy pocketbase:8090
+
+    # Enable gzip compression
+    encode gzip
+
+    # Set security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+}
+
+# For development (HTTP only)
+localhost {
+    reverse_proxy pocketbase:8090
+    encode gzip
+}
