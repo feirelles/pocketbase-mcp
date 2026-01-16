@@ -4,19 +4,18 @@ An MCP (Model Context Protocol) server that enables AI agents to interact with [
 
 ## Features
 
-- 🔍 **Query Records** - List, filter, sort, paginate, and expand relations
-- ✏️ **CRUD Operations** - Create, read, update, delete records
-- 🔐 **Authentication** - Admin and user authentication support
-- 📦 **Collection Management** - Create, update, delete collections (admin)
-- 📄 **TOML Output** - Compact output format to minimize token usage (25% smaller than JSON)
-- 🎯 **Type-Safe** - Full TypeScript with Zod validation
-- ⚡ **Concurrent Requests** - Supports simultaneous requests (autoCancellation disabled)
-- 🗂️ **All Field Types** - text, number, bool, email, url, date, autodate, select, json, file, relation, editor, geoPoint
+- Query records with filtering, sorting, pagination, and relation expansion
+- Full CRUD operations for records and collections
+- Admin and user authentication
+- Collection schema management
+- Compact TOML output format (25% smaller than JSON, configurable)
+- Type-safe TypeScript implementation with Zod validation
+- Supports all PocketBase field types: text, number, bool, email, url, date, autodate, select, json, file, relation, editor, geoPoint
 
 ## Installation
 
 ```bash
-npm install pocketbase-mcp-server
+npm install @feirelles/pocketbase-mcp
 ```
 
 Or clone and build locally:
@@ -106,35 +105,16 @@ Add to `.vscode/mcp.json`:
 | `pocketbase_update_collection` | Update collection schema |
 | `pocketbase_delete_collection` | Delete a collection |
 
-## Usage Examples
+## Usage
 
-### Query Records
+The MCP server enables AI agents to interact with your PocketBase instance through natural language. Agents can:
 
-```
-List all published posts sorted by newest first, with author info expanded
-```
+- Query and manage records across collections
+- Authenticate as admin or regular users
+- Create and modify collection schemas
+- Manage data with full CRUD capabilities
 
-The agent will call:
-```json
-{
-  "collection": "posts",
-  "filter": "status='published'",
-  "sort": "-created",
-  "expand": "author"
-}
-```
-
-### Authenticate
-
-```
-Login as admin with email admin@example.com and password secret123
-```
-
-### Create Record
-
-```
-Create a new post with title "Hello World" and status "draft"
-```
+Simply ask the AI agent to perform operations on your PocketBase data, and it will use the appropriate tools automatically.
 
 ## Output Format
 

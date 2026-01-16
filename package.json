@@ -1,11 +1,11 @@
 {
-  "name": "pocketbase-mcp-server",
+  "name": "@feirelles/pocketbase-mcp",
   "version": "1.0.0",
   "description": "MCP server for PocketBase - query and administration via AI agents",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "pocketbase-mcp-server": "dist/index.js"
+    "pocketbase-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

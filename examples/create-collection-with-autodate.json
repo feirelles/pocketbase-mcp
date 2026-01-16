@@ -1,0 +1,41 @@
+{
+  "tool": "pocketbase_create_collection",
+  "params": {
+    "name": "posts",
+    "type": "base",
+    "fields": [
+      {
+        "name": "title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "content",
+        "type": "editor",
+        "required": false
+      },
+      {
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "options": {
+          "onCreate": true,
+          "onUpdate": false
+        }
+      },
+      {
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "options": {
+          "onCreate": true,
+          "onUpdate": true
+        }
+      }
+    ],
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.id != ''",
+    "format": "json"
+  }
+}

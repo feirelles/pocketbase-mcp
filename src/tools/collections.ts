@@ -177,6 +177,15 @@ Examples:
               if (Object.keys(rest).length > 0) {
                 field.options = rest;
               }
+            } else if (f.type === 'autodate' && f.options) {
+              // For autodate fields, extract onCreate and onUpdate from options to field level
+              if (f.options.onCreate !== undefined) field.onCreate = f.options.onCreate;
+              if (f.options.onUpdate !== undefined) field.onUpdate = f.options.onUpdate;
+              // Pass remaining options
+              const { onCreate, onUpdate, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
             } else if (f.options && Object.keys(f.options).length > 0) {
               field.options = f.options;
             }
@@ -256,6 +265,15 @@ Examples:
               if (f.options.maxSelect) field.maxSelect = f.options.maxSelect;
               // Pass remaining options
               const { values, maxSelect, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
+            } else if (f.type === 'autodate' && f.options) {
+              // For autodate fields, extract onCreate and onUpdate from options to field level
+              if (f.options.onCreate !== undefined) field.onCreate = f.options.onCreate;
+              if (f.options.onUpdate !== undefined) field.onUpdate = f.options.onUpdate;
+              // Pass remaining options
+              const { onCreate, onUpdate, ...rest } = f.options;
               if (Object.keys(rest).length > 0) {
                 field.options = rest;
               }
