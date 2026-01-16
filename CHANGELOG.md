@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.1] - 2026-01-16
 
 ### Fixed
 - Autodate fields now correctly extract `onCreate` and `onUpdate` properties to field level (PocketBase API requirement)
