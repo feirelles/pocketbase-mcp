@@ -20,6 +20,8 @@ export function getClient(): PocketBase {
       throw new Error('POCKETBASE_URL environment variable is required');
     }
     pbClient = new PocketBase(url);
+    // Disable autoCancel to allow simultaneous requests
+    pbClient.autoCancellation(false);
   }
   return pbClient;
 }

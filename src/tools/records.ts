@@ -43,15 +43,16 @@ Examples:
       try {
         const pb = getClient();
         
+        const options: Record<string, unknown> = {};
+        if (params.filter) options.filter = params.filter;
+        if (params.sort) options.sort = params.sort;
+        if (params.fields) options.fields = params.fields;
+        if (params.expand) options.expand = params.expand;
+        
         const result = await pb.collection(params.collection).getList(
           params.page,
           params.perPage,
-          {
-            filter: params.filter,
-            sort: params.sort,
-            fields: params.fields,
-            expand: params.expand,
-          }
+          options
         );
         
         const output: RecordListResult = {
@@ -110,12 +111,13 @@ Examples:
       try {
         const pb = getClient();
         
+        const options: Record<string, unknown> = {};
+        if (params.fields) options.fields = params.fields;
+        if (params.expand) options.expand = params.expand;
+        
         const record = await pb.collection(params.collection).getOne(
           params.id,
-          {
-            fields: params.fields,
-            expand: params.expand,
-          }
+          options
         );
         
         const text = format({ ...record }, params.format as OutputFormat);

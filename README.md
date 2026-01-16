@@ -10,6 +10,8 @@ An MCP (Model Context Protocol) server that enables AI agents to interact with [
 - 📦 **Collection Management** - Create, update, delete collections (admin)
 - 📄 **TOML Output** - Compact output format to minimize token usage (25% smaller than JSON)
 - 🎯 **Type-Safe** - Full TypeScript with Zod validation
+- ⚡ **Concurrent Requests** - Supports simultaneous requests (autoCancellation disabled)
+- 🗂️ **All Field Types** - text, number, bool, email, url, date, autodate, select, json, file, relation, editor, geoPoint
 
 ## Installation
 
@@ -20,7 +22,7 @@ npm install pocketbase-mcp-server
 Or clone and build locally:
 
 ```bash
-git clone https://github.com/your-org/pocketbase-mcp.git
+git clone https://github.com/feirelles/pocketbase-mcp.git
 cd pocketbase-mcp
 npm install
 npm run build

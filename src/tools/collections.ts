@@ -42,10 +42,15 @@ Examples:
         requireAdminAuth();
         const pb = getClient();
         
+        const options: { filter?: string } = {};
+        if (params.filter) {
+          options.filter = params.filter;
+        }
+        
         const result = await pb.collections.getList(
           params.page,
           params.perPage,
-          { filter: params.filter }
+          options
         );
         
         const output = {
@@ -156,12 +161,28 @@ Examples:
           name: params.name,
           type: params.type,
           // PocketBase v0.21+ uses 'fields' instead of 'schema'
-          fields: params.fields.map(f => ({
-            name: f.name,
-            type: f.type,
-            required: f.required,
-            options: f.options || {},
-          })),
+          fields: params.fields.map(f => {
+            const field: any = {
+              name: f.name,
+              type: f.type,
+              required: f.required,
+            };
+            
+            // For select fields, extract values and maxSelect from options to field level
+            if (f.type === 'select' && f.options) {
+              if (f.options.values) field.values = f.options.values;
+              if (f.options.maxSelect) field.maxSelect = f.options.maxSelect;
+              // Pass remaining options
+              const { values, maxSelect, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
+            } else if (f.options && Object.keys(f.options).length > 0) {
+              field.options = f.options;
+            }
+            
+            return field;
+          }),
           listRule: params.listRule,
           viewRule: params.viewRule,
           createRule: params.createRule,
@@ -222,12 +243,28 @@ Examples:
         if (params.newName) updateData.name = params.newName;
         if (params.fields) {
           // PocketBase v0.21+ uses 'fields' instead of 'schema'
-          updateData.fields = params.fields.map(f => ({
-            name: f.name,
-            type: f.type,
-            required: f.required,
-            options: f.options || {},
-          }));
+          updateData.fields = params.fields.map(f => {
+            const field: any = {
+              name: f.name,
+              type: f.type,
+              required: f.required,
+            };
+            
+            // For select fields, extract values and maxSelect from options to field level
+            if (f.type === 'select' && f.options) {
+              if (f.options.values) field.values = f.options.values;
+              if (f.options.maxSelect) field.maxSelect = f.options.maxSelect;
+              // Pass remaining options
+              const { values, maxSelect, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
+            } else if (f.options && Object.keys(f.options).length > 0) {
+              field.options = f.options;
+            }
+            
+            return field;
+          });
         }
         if (params.listRule !== undefined) updateData.listRule = params.listRule;
         if (params.viewRule !== undefined) updateData.viewRule = params.viewRule;

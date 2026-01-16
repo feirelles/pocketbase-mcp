@@ -12,7 +12,7 @@ const formatParam = z.enum(['toml', 'json']).default('toml')
 /** Field type enum */
 const fieldTypeEnum = z.enum([
   'text', 'number', 'bool', 'email', 'url', 'date', 
-  'select', 'json', 'file', 'relation', 'editor'
+  'select', 'json', 'file', 'relation', 'editor', 'autodate', 'geoPoint'
 ]);
 
 /** Field definition schema */

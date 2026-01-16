@@ -15,6 +15,12 @@ dist/
 *.swp
 *.swo
 
+# Project management
+.github/
+specs/
+.specify/
+.copilot-skills-config.yaml
+
 # OS
 .DS_Store
 Thumbs.db
