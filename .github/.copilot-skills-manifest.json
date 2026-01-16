@@ -1,7 +1,0 @@
-{
-  "source_repo": "/home/felipe/.copilot-skills",
-  "source_commit": "ac94269",
-  "installed_at": "2026-01-15T17:12:15Z",
-  "skills": ["anthropics/skill-creator", "anthropics/mcp-builder", "whamp/pocketbase"],
-  "instructions": []
-}
