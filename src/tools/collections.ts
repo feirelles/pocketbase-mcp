@@ -161,7 +161,7 @@ Examples:
           name: params.name,
           type: params.type,
           // PocketBase v0.21+ uses 'fields' instead of 'schema'
-          fields: params.fields.map(f => {
+          fields: await Promise.all(params.fields.map(async f => {
             const field: any = {
               name: f.name,
               type: f.type,
@@ -186,12 +186,49 @@ Examples:
               if (Object.keys(rest).length > 0) {
                 field.options = rest;
               }
+            } else if (f.type === 'relation' && f.options) {
+              // For relation fields, resolve collection name to ID if needed
+              const opts = { ...f.options };
+              if (opts.collectionId && typeof opts.collectionId === 'string') {
+                // Check if it's a name (not starting with underscore and not looking like an ID)
+                const collectionIdValue = opts.collectionId as string;
+                const looksLikeId = collectionIdValue.startsWith('pbc_') || /^[a-z0-9]{15}$/.test(collectionIdValue);
+                if (!looksLikeId) {
+                  // Resolve collection name to ID
+                  try {
+                    const relatedCollection = await pb.collections.getOne(collectionIdValue);
+                    opts.collectionId = relatedCollection.id;
+                  } catch {
+                    // If resolution fails, keep the original value and let PocketBase report the error
+                  }
+                }
+              }
+              field.collectionId = opts.collectionId;
+              if (opts.cascadeDelete !== undefined) field.cascadeDelete = opts.cascadeDelete;
+              if (opts.maxSelect !== undefined) field.maxSelect = opts.maxSelect;
+              if (opts.displayFields) field.displayFields = opts.displayFields;
+              // Pass any remaining options
+              const { collectionId, cascadeDelete, maxSelect, displayFields, ...rest } = opts;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
+            } else if (f.type === 'file' && f.options) {
+              // For file fields, extract maxSelect, maxSize, mimeTypes, thumbs to field level
+              if (f.options.maxSelect !== undefined) field.maxSelect = f.options.maxSelect;
+              if (f.options.maxSize !== undefined) field.maxSize = f.options.maxSize;
+              if (f.options.mimeTypes) field.mimeTypes = f.options.mimeTypes;
+              if (f.options.thumbs) field.thumbs = f.options.thumbs;
+              // Pass remaining options
+              const { maxSelect, maxSize, mimeTypes, thumbs, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
             } else if (f.options && Object.keys(f.options).length > 0) {
               field.options = f.options;
             }
             
             return field;
-          }),
+          })),
           listRule: params.listRule,
           viewRule: params.viewRule,
           createRule: params.createRule,
@@ -252,7 +289,7 @@ Examples:
         if (params.newName) updateData.name = params.newName;
         if (params.fields) {
           // PocketBase v0.21+ uses 'fields' instead of 'schema'
-          updateData.fields = params.fields.map(f => {
+          updateData.fields = await Promise.all(params.fields.map(async f => {
             const field: any = {
               name: f.name,
               type: f.type,
@@ -277,12 +314,49 @@ Examples:
               if (Object.keys(rest).length > 0) {
                 field.options = rest;
               }
+            } else if (f.type === 'relation' && f.options) {
+              // For relation fields, resolve collection name to ID if needed
+              const opts = { ...f.options };
+              if (opts.collectionId && typeof opts.collectionId === 'string') {
+                // Check if it's a name (not starting with underscore and not looking like an ID)
+                const collectionIdValue = opts.collectionId as string;
+                const looksLikeId = collectionIdValue.startsWith('pbc_') || /^[a-z0-9]{15}$/.test(collectionIdValue);
+                if (!looksLikeId) {
+                  // Resolve collection name to ID
+                  try {
+                    const relatedCollection = await pb.collections.getOne(collectionIdValue);
+                    opts.collectionId = relatedCollection.id;
+                  } catch {
+                    // If resolution fails, keep the original value and let PocketBase report the error
+                  }
+                }
+              }
+              field.collectionId = opts.collectionId;
+              if (opts.cascadeDelete !== undefined) field.cascadeDelete = opts.cascadeDelete;
+              if (opts.maxSelect !== undefined) field.maxSelect = opts.maxSelect;
+              if (opts.displayFields) field.displayFields = opts.displayFields;
+              // Pass any remaining options
+              const { collectionId, cascadeDelete, maxSelect, displayFields, ...rest } = opts;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
+            } else if (f.type === 'file' && f.options) {
+              // For file fields, extract maxSelect, maxSize, mimeTypes, thumbs to field level
+              if (f.options.maxSelect !== undefined) field.maxSelect = f.options.maxSelect;
+              if (f.options.maxSize !== undefined) field.maxSize = f.options.maxSize;
+              if (f.options.mimeTypes) field.mimeTypes = f.options.mimeTypes;
+              if (f.options.thumbs) field.thumbs = f.options.thumbs;
+              // Pass remaining options
+              const { maxSelect, maxSize, mimeTypes, thumbs, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
             } else if (f.options && Object.keys(f.options).length > 0) {
               field.options = f.options;
             }
             
             return field;
-          });
+          }));
         }
         if (params.listRule !== undefined) updateData.listRule = params.listRule;
         if (params.viewRule !== undefined) updateData.viewRule = params.viewRule;

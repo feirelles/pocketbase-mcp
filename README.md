@@ -154,6 +154,64 @@ Error codes:
 - `VALIDATION_ERROR` - Invalid input data
 - `PERMISSION_DENIED` - Insufficient permissions
 
+## Field Types and Special Handling
+
+### Relation Fields
+
+When creating or updating collections with `relation` type fields, you can use either:
+- Collection **name** (e.g., `"users"`) - automatically resolved to ID
+- Collection **ID** (e.g., `"pbc_2478858439"`) - used directly
+
+The MCP server automatically resolves collection names to their IDs for convenience.
+
+**Example:**
+```json
+{
+  "name": "author",
+  "type": "relation",
+  "required": true,
+  "options": {
+    "collectionId": "users",
+    "cascadeDelete": false,
+    "maxSelect": 1,
+    "displayFields": ["email", "name"]
+  }
+}
+```
+
+See [examples/create-collection-with-relations.json](examples/create-collection-with-relations.json) for a complete example.
+
+### Select Fields
+
+For `select` fields, provide `values` and `maxSelect` in the options:
+
+```json
+{
+  "name": "status",
+  "type": "select",
+  "required": true,
+  "options": {
+    "values": ["draft", "published", "archived"],
+    "maxSelect": 1
+  }
+}
+```
+
+### AutoDate Fields
+
+For `autodate` fields, specify when they should update:
+
+```json
+{
+  "name": "created",
+  "type": "autodate",
+  "options": {
+    "onCreate": true,
+    "onUpdate": false
+  }
+}
+```
+
 ## Development
 
 ```bash

@@ -1,0 +1,48 @@
+{
+  "tool": "pocketbase_create_collection",
+  "params": {
+    "name": "comments",
+    "type": "base",
+    "fields": [
+      {
+        "name": "text",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "author",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "maxSelect": 1,
+          "displayFields": ["email", "name"]
+        }
+      },
+      {
+        "name": "post",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "posts",
+          "cascadeDelete": true,
+          "maxSelect": 1
+        }
+      },
+      {
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "options": {
+          "onCreate": true,
+          "onUpdate": false
+        }
+      }
+    ],
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.id != ''",
+    "format": "json"
+  }
+}
