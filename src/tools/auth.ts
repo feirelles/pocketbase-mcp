@@ -2,7 +2,6 @@
  * Authentication Tools
  */
 
-import { server } from '../index.js';
 import { getClient, getAuthState, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import {
@@ -16,11 +15,12 @@ import {
   type LogoutInput,
 } from '../schemas/auth.js';
 import type { OutputFormat } from '../types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 /**
  * Register all authentication tools with the MCP server
  */
-export function registerAuthTools(): void {
+export function registerAuthTools(server: McpServer): void {
   // Admin Authentication Tool
   server.tool(
     'pocketbase_auth_admin',
@@ -78,17 +78,26 @@ User auth provides access based on collection API rules.
 Default collection is "users", but you can specify any auth collection.
 
 Examples:
-- Authenticate: email="user@example.com", password="userpassword"
-- Custom collection: collection="members", email="member@example.com", password="password"`,
+- Authenticate: identity="user@example.com", password="userpassword"
+- With username: identity="johndoe", password="password"
+- Custom collection: collection="members", identity="member@example.com", password="password"
+- Specific field: identity="user@example.com", identityField="email", password="password"`,
     AuthUserInputSchema.shape,
     async (params: AuthUserInput) => {
       try {
         const pb = getClient();
         
+        // Build auth options
+        const authOptions: { identity?: string } = {};
+        if (params.identityField) {
+          authOptions.identity = params.identityField;
+        }
+        
         // Authenticate as user
         const authData = await pb.collection(params.collection).authWithPassword(
-          params.email,
-          params.password
+          params.identity,
+          params.password,
+          authOptions
         );
         
         const output = {
@@ -98,6 +107,7 @@ Examples:
           user: {
             id: authData.record.id,
             email: authData.record.email,
+            username: authData.record.username,
             verified: authData.record.verified,
             created: authData.record.created,
             updated: authData.record.updated,

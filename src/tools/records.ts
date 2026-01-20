@@ -3,7 +3,6 @@
  */
 
 import { z } from 'zod';
-import { server } from '../index.js';
 import { getClient, handlePocketBaseError, isErrorResponse } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import { MAX_RESPONSE_SIZE } from '../constants.js';
@@ -20,11 +19,12 @@ import {
   type DeleteRecordInput,
 } from '../schemas/records.js';
 import type { RecordListResult, OutputFormat } from '../types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 /**
  * Register all record tools with the MCP server
  */
-export function registerRecordTools(): void {
+export function registerRecordTools(server: McpServer): void {
   // List Records Tool
   server.tool(
     'pocketbase_list_records',
@@ -48,6 +48,7 @@ Examples:
         if (params.sort) options.sort = params.sort;
         if (params.fields) options.fields = params.fields;
         if (params.expand) options.expand = params.expand;
+        if (params.skipTotal) options.skipTotal = params.skipTotal;
         
         const result = await pb.collection(params.collection).getList(
           params.page,
@@ -145,13 +146,18 @@ Data should be provided as key-value pairs matching collection schema.
 
 Examples:
 - Create post: collection="posts", data={"title": "Hello", "status": "draft"}
-- With relation: collection="comments", data={"text": "Nice!", "post": "post_id"}`,
+- With relation: collection="comments", data={"text": "Nice!", "post": "post_id"}
+- With expand: collection="comments", data={"text": "Nice!", "post": "post_id"}, expand="post"`,
     CreateRecordInputSchema.shape,
     async (params: CreateRecordInput) => {
       try {
         const pb = getClient();
         
-        const record = await pb.collection(params.collection).create(params.data);
+        const options: Record<string, unknown> = {};
+        if (params.expand) options.expand = params.expand;
+        if (params.fields) options.fields = params.fields;
+        
+        const record = await pb.collection(params.collection).create(params.data, options);
         
         const text = format({ ...record }, params.format as OutputFormat);
         
@@ -178,13 +184,18 @@ Returns the updated record with new timestamps.
 
 Examples:
 - Update status: collection="posts", id="abc123", data={"status": "published"}
-- Update multiple: collection="posts", id="abc123", data={"title": "New Title", "status": "published"}`,
+- Update multiple: collection="posts", id="abc123", data={"title": "New Title", "status": "published"}
+- With expand: collection="posts", id="abc123", data={"author": "user_id"}, expand="author"`,
     UpdateRecordInputSchema.shape,
     async (params: UpdateRecordInput) => {
       try {
         const pb = getClient();
         
-        const record = await pb.collection(params.collection).update(params.id, params.data);
+        const options: Record<string, unknown> = {};
+        if (params.expand) options.expand = params.expand;
+        if (params.fields) options.fields = params.fields;
+        
+        const record = await pb.collection(params.collection).update(params.id, params.data, options);
         
         const text = format({ ...record }, params.format as OutputFormat);
         

@@ -12,8 +12,8 @@ const formatParam = z.enum(['toml', 'json']).default('toml')
  * Input schema for admin authentication
  */
 export const AuthAdminInputSchema = z.object({
-  email: z.string().email('Invalid email format')
-    .describe('Admin email address'),
+  email: z.string().min(1, 'Email required')
+    .describe('Admin/superuser email address'),
   password: z.string().min(1, 'Password required')
     .describe('Admin password'),
   format: formatParam,
@@ -27,10 +27,12 @@ export type AuthAdminInput = z.infer<typeof AuthAdminInputSchema>;
 export const AuthUserInputSchema = z.object({
   collection: z.string().default('users')
     .describe('Auth collection name (default: users)'),
-  email: z.string().email('Invalid email format')
-    .describe('User email address'),
+  identity: z.string().min(1, 'Identity required')
+    .describe('User identity (email or username)'),
   password: z.string().min(1, 'Password required')
     .describe('User password'),
+  identityField: z.string().optional()
+    .describe('Specific identity field to use (e.g., "email", "username"). If not set, uses first matching field.'),
   format: formatParam,
 }).strict();
 

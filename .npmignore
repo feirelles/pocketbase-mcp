@@ -1,0 +1,25 @@
+# Test files
+tests/
+*.test.ts
+vitest.config.ts
+
+# PocketBase binary and data
+pocketbase/
+
+# Development files
+.vscode/
+.github/
+.git/
+.gitignore
+.specify/
+
+# Source files (dist is published)
+src/
+
+# Config files
+tsconfig.json
+eslint.config.js
+test-collection.js
+
+# Specs
+specs/

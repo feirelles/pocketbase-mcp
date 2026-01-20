@@ -2,7 +2,6 @@
  * Collection Management Tools
  */
 
-import { server } from '../index.js';
 import { getClient, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import {
@@ -18,11 +17,12 @@ import {
   type DeleteCollectionInput,
 } from '../schemas/collections.js';
 import type { OutputFormat } from '../types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 /**
  * Register all collection management tools with the MCP server
  */
-export function registerCollectionTools(): void {
+export function registerCollectionTools(server: McpServer): void {
   // List Collections Tool
   server.tool(
     'pocketbase_list_collections',
@@ -63,7 +63,7 @@ Examples:
             name: col.name,
             type: col.type,
             system: col.system,
-            fieldCount: col.schema?.length ?? 0,
+            fieldCount: col.fields?.length ?? 0,
           })),
         };
         
@@ -103,6 +103,116 @@ Examples:
         
         const collection = await pb.collections.getOne(params.name);
         
+        // Extract fields with detailed information (PocketBase v0.22+ uses 'fields' not 'schema')
+        const collectionFields = (collection.fields || []).map((field: any) => {
+          // Base field properties that all fields have
+          const fieldInfo: Record<string, any> = {
+            id: field.id,
+            name: field.name,
+            type: field.type,
+            system: field.system ?? false,
+            hidden: field.hidden ?? false,
+            presentable: field.presentable ?? false,
+          };
+          
+          // Text field properties
+          if (field.type === 'text') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.min !== undefined) fieldInfo.min = field.min;
+            if (field.max !== undefined) fieldInfo.max = field.max;
+            if (field.pattern) fieldInfo.pattern = field.pattern;
+            if (field.autogeneratePattern) fieldInfo.autogeneratePattern = field.autogeneratePattern;
+            if (field.primaryKey !== undefined) fieldInfo.primaryKey = field.primaryKey;
+          }
+          
+          // Number field properties
+          if (field.type === 'number') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.min !== undefined) fieldInfo.min = field.min;
+            if (field.max !== undefined) fieldInfo.max = field.max;
+            if (field.onlyInt !== undefined) fieldInfo.onlyInt = field.onlyInt;
+          }
+          
+          // Bool field properties
+          if (field.type === 'bool') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+          }
+          
+          // Email field properties
+          if (field.type === 'email') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.exceptDomains) fieldInfo.exceptDomains = field.exceptDomains;
+            if (field.onlyDomains) fieldInfo.onlyDomains = field.onlyDomains;
+          }
+          
+          // URL field properties
+          if (field.type === 'url') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.exceptDomains) fieldInfo.exceptDomains = field.exceptDomains;
+            if (field.onlyDomains) fieldInfo.onlyDomains = field.onlyDomains;
+          }
+          
+          // Date field properties
+          if (field.type === 'date') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.min) fieldInfo.min = field.min;
+            if (field.max) fieldInfo.max = field.max;
+          }
+          
+          // Select field properties
+          if (field.type === 'select') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.values) fieldInfo.values = field.values;
+            if (field.maxSelect !== undefined) fieldInfo.maxSelect = field.maxSelect;
+          }
+          
+          // Relation field properties
+          if (field.type === 'relation') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.collectionId) fieldInfo.collectionId = field.collectionId;
+            if (field.cascadeDelete !== undefined) fieldInfo.cascadeDelete = field.cascadeDelete;
+            if (field.minSelect !== undefined) fieldInfo.minSelect = field.minSelect;
+            if (field.maxSelect !== undefined) fieldInfo.maxSelect = field.maxSelect;
+            if (field.displayFields) fieldInfo.displayFields = field.displayFields;
+          }
+          
+          // File field properties
+          if (field.type === 'file') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.maxSelect !== undefined) fieldInfo.maxSelect = field.maxSelect;
+            if (field.maxSize !== undefined) fieldInfo.maxSize = field.maxSize;
+            if (field.mimeTypes) fieldInfo.mimeTypes = field.mimeTypes;
+            if (field.thumbs) fieldInfo.thumbs = field.thumbs;
+            if (field.protected !== undefined) fieldInfo.protected = field.protected;
+          }
+          
+          // JSON field properties
+          if (field.type === 'json') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.maxSize !== undefined) fieldInfo.maxSize = field.maxSize;
+          }
+          
+          // Editor field properties
+          if (field.type === 'editor') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+            if (field.maxSize !== undefined) fieldInfo.maxSize = field.maxSize;
+            if (field.convertUrls !== undefined) fieldInfo.convertUrls = field.convertUrls;
+          }
+          
+          // Autodate field properties
+          if (field.type === 'autodate') {
+            if (field.onCreate !== undefined) fieldInfo.onCreate = field.onCreate;
+            if (field.onUpdate !== undefined) fieldInfo.onUpdate = field.onUpdate;
+          }
+          
+          // GeoPoint field properties
+          if (field.type === 'geoPoint') {
+            if (field.required !== undefined) fieldInfo.required = field.required;
+          }
+          
+          return fieldInfo;
+        });
+        
         const output = {
           id: collection.id,
           name: collection.name,
@@ -116,12 +226,8 @@ Examples:
           updateRule: collection.updateRule,
           deleteRule: collection.deleteRule,
           indexes: collection.indexes || [],
-          fields: (collection.schema || []).map((field) => ({
-            name: field.name,
-            type: field.type,
-            required: field.required ?? false,
-            options: field.options || {},
-          })),
+          fieldCount: collectionFields.length,
+          fields: collectionFields,
         };
         
         const text = format(output, params.format as OutputFormat);

@@ -41,18 +41,19 @@ export function resetClient(): void {
  */
 export function getAuthState(): AuthState {
   const pb = getClient();
-  const model = pb.authStore.model;
+  const record = pb.authStore.record;
   
-  // In PocketBase v0.21+, superusers are in _superusers collection
-  const isSuperuser = model?.collectionName === '_superusers' || pb.authStore.isAdmin;
+  // In PocketBase v0.22+, use isSuperuser instead of deprecated isAdmin
+  const isSuperuser = pb.authStore.isSuperuser;
   
   return {
     isAuthenticated: pb.authStore.isValid,
-    authType: isSuperuser ? 'admin' : (model ? 'user' : null),
-    model: model ? {
-      id: model.id as string,
-      email: (model.email ?? model.username ?? '') as string,
-      ...(model as Record<string, unknown>),
+    authType: isSuperuser ? 'admin' : (record ? 'user' : null),
+    model: record ? {
+      id: record.id as string,
+      email: (record.email ?? record.username ?? '') as string,
+      collectionName: record.collectionName as string,
+      ...(record as Record<string, unknown>),
     } : null,
     tokenValid: pb.authStore.isValid,
     tokenExpiry: null, // SDK doesn't expose token expiry directly
@@ -65,10 +66,9 @@ export function getAuthState(): AuthState {
  */
 export function requireAdminAuth(): void {
   const pb = getClient();
-  const model = pb.authStore.model;
-  const isSuperuser = model?.collectionName === '_superusers' || pb.authStore.isAdmin;
   
-  if (!isSuperuser) {
+  // In PocketBase v0.22+, use isSuperuser instead of deprecated isAdmin
+  if (!pb.authStore.isSuperuser) {
     throw createErrorResponse(
       ErrorCodes.AUTH_REQUIRED,
       'Admin authentication required for this operation',

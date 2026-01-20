@@ -21,6 +21,9 @@ specs/
 .specify/
 .copilot-skills-config.yaml
 
+# Sensitive files
+.github/copilot-instructions.md
+
 # OS
 .DS_Store
 Thumbs.db

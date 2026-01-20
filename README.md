@@ -81,7 +81,7 @@ Add to `.vscode/mcp.json`:
 | Tool | Description |
 |------|-------------|
 | `pocketbase_auth_admin` | Authenticate as admin/superuser |
-| `pocketbase_auth_user` | Authenticate as regular user |
+| `pocketbase_auth_user` | Authenticate as regular user (supports email/username) |
 | `pocketbase_get_auth_status` | Check current authentication state |
 | `pocketbase_logout` | Clear authentication session |
 
@@ -89,10 +89,10 @@ Add to `.vscode/mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `pocketbase_list_records` | List records with filtering, sorting, pagination |
+| `pocketbase_list_records` | List records with filtering, sorting, pagination, skipTotal |
 | `pocketbase_get_record` | Get a single record by ID |
-| `pocketbase_create_record` | Create a new record |
-| `pocketbase_update_record` | Update an existing record (partial) |
+| `pocketbase_create_record` | Create a new record (supports expand/fields in response) |
+| `pocketbase_update_record` | Update an existing record (supports expand/fields in response) |
 | `pocketbase_delete_record` | Delete a record |
 
 ### Collections (Admin Only)
@@ -104,6 +104,25 @@ Add to `.vscode/mcp.json`:
 | `pocketbase_create_collection` | Create a new collection |
 | `pocketbase_update_collection` | Update collection schema |
 | `pocketbase_delete_collection` | Delete a collection |
+
+### Administration (Admin Only)
+
+| Tool | Description |
+|------|-------------|
+| `pocketbase_health_check` | Check server health status (no auth required) |
+| `pocketbase_list_logs` | List server logs with filtering |
+| `pocketbase_get_log` | Get a single log entry by ID |
+| `pocketbase_log_stats` | Get hourly log statistics |
+| `pocketbase_list_backups` | List all available backup files |
+| `pocketbase_create_backup` | Create a new database backup |
+| `pocketbase_restore_backup` | Restore from a backup file |
+| `pocketbase_delete_backup` | Delete a backup file |
+
+### Files
+
+| Tool | Description |
+|------|-------------|
+| `pocketbase_get_file_url` | Generate URL to access files with optional thumbnail |
 
 ## Usage
 
@@ -211,6 +230,56 @@ For `autodate` fields, specify when they should update:
   }
 }
 ```
+
+### File Fields and URLs
+
+Use `pocketbase_get_file_url` to generate URLs for files stored in PocketBase. Supports thumbnail generation for images (JPG, PNG, GIF, WebP).
+
+**Thumbnail formats:**
+- `WxH` - Crop to WxH viewbox (from center)
+- `WxHt` - Crop from top
+- `WxHb` - Crop from bottom
+- `WxHf` - Fit inside WxH (no crop)
+- `0xH` - Resize to height, preserve aspect ratio
+- `Wx0` - Resize to width, preserve aspect ratio
+
+**Example:**
+```
+pocketbase_get_file_url(
+  collection="posts",
+  recordId="abc123",
+  filename="photo.jpg",
+  thumb="200x200"
+)
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+If you get `CONNECTION_ERROR`:
+1. Verify PocketBase is running: `curl http://localhost:8090/api/health`
+2. Check `POCKETBASE_URL` is correctly set
+3. Ensure no firewall blocking the port
+
+### Authentication Issues
+
+- **Admin auth fails**: Verify email/password for `_superusers` collection
+- **User auth fails**: Use `identity` parameter (can be email OR username)
+- **Permission denied**: Check collection API rules in PocketBase admin
+
+### Common Mistakes
+
+1. **Using `email` instead of `identity` for user auth**
+   - Correct: `identity="user@example.com"` or `identity="johndoe"`
+   - Wrong: `email="user@example.com"` (only for admin auth)
+
+2. **Forgetting to authenticate before admin operations**
+   - Use `pocketbase_auth_admin` first
+   - Check with `pocketbase_get_auth_status`
+
+3. **Creating backups without name**
+   - `name` is optional - if omitted, auto-generated
 
 ## Development
 

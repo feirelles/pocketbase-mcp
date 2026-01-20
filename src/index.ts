@@ -12,7 +12,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 // Create MCP server instance
 const server = new McpServer({
   name: 'pocketbase-mcp-server',
-  version: '1.0.0',
+  version: '1.3.0',
 });
 
 // Export server for tool registration in other modules
@@ -22,11 +22,15 @@ export { server };
 import { registerRecordTools } from './tools/records.js';
 import { registerAuthTools } from './tools/auth.js';
 import { registerCollectionTools } from './tools/collections.js';
+import { registerAdminTools } from './tools/admin.js';
+import { registerFileTools } from './tools/files.js';
 
 // Register all tools
-registerRecordTools();
-registerAuthTools();
-registerCollectionTools();
+registerRecordTools(server);
+registerAuthTools(server);
+registerCollectionTools(server);
+registerAdminTools(server);
+registerFileTools(server);
 
 /**
  * Start the MCP server with stdio transport

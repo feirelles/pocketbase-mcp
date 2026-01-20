@@ -37,6 +37,8 @@ export const ListRecordsInputSchema = z.object({
     .describe('Collection name to query'),
   ...paginationParams,
   ...queryParams,
+  skipTotal: z.boolean().optional()
+    .describe('Skip total count query for better performance (totalItems/totalPages will be -1)'),
   format: formatParam,
 }).strict();
 
@@ -67,6 +69,10 @@ export const CreateRecordInputSchema = z.object({
     .describe('Collection name'),
   data: z.record(z.unknown())
     .describe('Record data as key-value pairs'),
+  expand: z.string().optional()
+    .describe('Relations to expand in the response'),
+  fields: z.string().optional()
+    .describe('Comma-separated fields to return in the response'),
   format: formatParam,
 }).strict();
 
@@ -82,6 +88,10 @@ export const UpdateRecordInputSchema = z.object({
     .describe('Record ID to update'),
   data: z.record(z.unknown())
     .describe('Fields to update (partial update)'),
+  expand: z.string().optional()
+    .describe('Relations to expand in the response'),
+  fields: z.string().optional()
+    .describe('Comma-separated fields to return in the response'),
   format: formatParam,
 }).strict();
 
