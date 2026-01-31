@@ -255,6 +255,11 @@ Examples:
 Creates a new collection with specified fields and rules.
 Collection name must start with a letter and contain only alphanumeric characters and underscores.
 
+**Automatic fields (if not provided):**
+- 'id': text field with autogeneratePattern "[a-z0-9]{15}" (15-char alphanumeric, primary key)
+- 'created': autodate field (set on create)
+- 'updated': autodate field (set on create and update)
+
 Examples:
 - Create posts: name="posts", type="base", fields=[{name: "title", type: "text", required: true}]`,
     CreateCollectionInputSchema.shape,
@@ -263,19 +268,70 @@ Examples:
         requireAdminAuth();
         const pb = getClient();
         
+        // Add automatic system fields if not already present
+        const userFields = params.fields || [];
+        const hasId = userFields.some(f => f.name === 'id');
+        const hasCreated = userFields.some(f => f.name === 'created');
+        const hasUpdated = userFields.some(f => f.name === 'updated');
+        
+        // Build automatic fields array
+        const autoFields: typeof userFields = [];
+        
+        // Add id field with autogenerate pattern (PocketBase standard)
+        if (!hasId) {
+          autoFields.push({
+            name: 'id',
+            type: 'text' as const,
+            required: true,
+            options: {
+              min: 15,
+              max: 15,
+              pattern: '^[a-z0-9]+$',
+              autogeneratePattern: '[a-z0-9]{15}',
+              primaryKey: true,
+              system: true,
+            },
+          });
+        }
+        
+        // Add created/updated autodate fields
+        if (!hasCreated) {
+          autoFields.push({ name: 'created', type: 'autodate' as const, required: false, options: { onCreate: true, onUpdate: false } });
+        }
+        if (!hasUpdated) {
+          autoFields.push({ name: 'updated', type: 'autodate' as const, required: false, options: { onCreate: true, onUpdate: true } });
+        }
+        
+        // Auto fields first, then user fields
+        const fieldsWithSystemFields = [...autoFields, ...userFields];
+        
         const collectionData = {
           name: params.name,
           type: params.type,
           // PocketBase v0.21+ uses 'fields' instead of 'schema'
-          fields: await Promise.all(params.fields.map(async f => {
+          fields: await Promise.all(fieldsWithSystemFields.map(async f => {
             const field: any = {
               name: f.name,
               type: f.type,
               required: f.required,
             };
             
+            // For text fields, extract options to field level (for ID autogeneration, etc.)
+            if (f.type === 'text' && f.options) {
+              if (f.options.min !== undefined) field.min = f.options.min;
+              if (f.options.max !== undefined) field.max = f.options.max;
+              if (f.options.pattern) field.pattern = f.options.pattern;
+              if (f.options.autogeneratePattern) field.autogeneratePattern = f.options.autogeneratePattern;
+              if (f.options.primaryKey !== undefined) field.primaryKey = f.options.primaryKey;
+              if (f.options.system !== undefined) field.system = f.options.system;
+              if (f.options.hidden !== undefined) field.hidden = f.options.hidden;
+              // Pass remaining options
+              const { min, max, pattern, autogeneratePattern, primaryKey, system, hidden, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
             // For select fields, extract values and maxSelect from options to field level
-            if (f.type === 'select' && f.options) {
+            } else if (f.type === 'select' && f.options) {
               if (f.options.values) field.values = f.options.values;
               if (f.options.maxSelect) field.maxSelect = f.options.maxSelect;
               // Pass remaining options
@@ -402,8 +458,22 @@ Examples:
               required: f.required,
             };
             
+            // For text fields, extract options to field level (for ID autogeneration, etc.)
+            if (f.type === 'text' && f.options) {
+              if (f.options.min !== undefined) field.min = f.options.min;
+              if (f.options.max !== undefined) field.max = f.options.max;
+              if (f.options.pattern) field.pattern = f.options.pattern;
+              if (f.options.autogeneratePattern) field.autogeneratePattern = f.options.autogeneratePattern;
+              if (f.options.primaryKey !== undefined) field.primaryKey = f.options.primaryKey;
+              if (f.options.system !== undefined) field.system = f.options.system;
+              if (f.options.hidden !== undefined) field.hidden = f.options.hidden;
+              // Pass remaining options
+              const { min, max, pattern, autogeneratePattern, primaryKey, system, hidden, ...rest } = f.options;
+              if (Object.keys(rest).length > 0) {
+                field.options = rest;
+              }
             // For select fields, extract values and maxSelect from options to field level
-            if (f.type === 'select' && f.options) {
+            } else if (f.type === 'select' && f.options) {
               if (f.options.values) field.values = f.options.values;
               if (f.options.maxSelect) field.maxSelect = f.options.maxSelect;
               // Pass remaining options
