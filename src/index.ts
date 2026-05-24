@@ -20,7 +20,7 @@ import { registerConnection, listConnections } from './services/pocketbase.js';
 
 const server = new McpServer({
   name: 'pocketbase-mcp-server',
-  version: '1.3.0',
+  version: '2.0.0',
 });
 
 export { server };

@@ -1,12 +1,13 @@
 # PocketBase MCP Server
 
-An MCP (Model Context Protocol) server that enables AI agents to interact with [PocketBase](https://pocketbase.io) instances for data queries and administration.
+An MCP (Model Context Protocol) server that enables AI agents to interact with one or more [PocketBase](https://pocketbase.io) instances for data queries and administration.
 
 ## Features
 
+- **Multi-instance**: register multiple PocketBase connections at runtime; switch between them per tool call with an `instance` parameter. Auth state is isolated per connection.
 - Query records with filtering, sorting, pagination, and relation expansion
 - Full CRUD operations for records and collections
-- Admin and user authentication
+- Admin and user authentication (per registered connection)
 - Collection schema management
 - Compact TOML output format (25% smaller than JSON, configurable)
 - Type-safe TypeScript implementation with Zod validation
@@ -29,11 +30,29 @@ npm run build
 
 ## Configuration
 
-Set the PocketBase URL as an environment variable:
+Two ways to point the MCP at a PocketBase instance:
+
+### A) Environment variable (single instance, auto-registered)
 
 ```bash
 export POCKETBASE_URL="http://localhost:8090"
 ```
+
+The URL is registered as the connection name `"default"` at startup, so existing single-PB workflows keep working with no extra setup. Tools that don't pass `instance` resolve to it automatically.
+
+### B) Runtime registration via `pocketbase_connect` (one or more instances)
+
+Leave the env var unset and have the agent call `pocketbase_connect` for each PocketBase you want available. This is the recommended approach for multi-instance workflows (e.g., comparing staging vs prod, or one Claude Code per project with each project pointing at its own PocketBase port).
+
+```
+pocketbase_connect name="staging" url="http://localhost:8090"
+pocketbase_connect name="prod"    url="http://prod.example.com"
+
+pocketbase_list_records instance="staging" collection="posts"
+pocketbase_list_records instance="prod"    collection="posts"
+```
+
+`pocketbase_connect` validates `/api/health` before storing — if PocketBase isn't reachable the registration fails and nothing is stored.
 
 ## MCP Client Configuration
 
@@ -76,14 +95,24 @@ Add to `.vscode/mcp.json`:
 
 ## Available Tools
 
+Every tool below accepts an optional `instance: string` parameter naming a registered connection. Omit it when only one connection is registered.
+
+### Connections
+
+| Tool | Description |
+|------|-------------|
+| `pocketbase_connect` | Register a connection (`name`, `url`). Validates `/api/health` first. |
+| `pocketbase_disconnect` | Remove a connection and clear its authStore. |
+| `pocketbase_list_connections` | List registered connections with their auth state. |
+
 ### Authentication
 
 | Tool | Description |
 |------|-------------|
-| `pocketbase_auth_admin` | Authenticate as admin/superuser |
+| `pocketbase_auth_admin` | Authenticate as admin/superuser on the resolved instance |
 | `pocketbase_auth_user` | Authenticate as regular user (supports email/username) |
-| `pocketbase_get_auth_status` | Check current authentication state |
-| `pocketbase_logout` | Clear authentication session |
+| `pocketbase_get_auth_status` | Check current authentication state for the resolved instance |
+| `pocketbase_logout` | Clear auth session (per instance, or `all: true` for every connection) |
 
 ### Records
 
@@ -109,7 +138,7 @@ Add to `.vscode/mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `pocketbase_health_check` | Check server health status (no auth required) |
+| `pocketbase_health_check` | Check server health (no auth). Accepts `instance` OR `url` (ad-hoc probe, no registration) |
 | `pocketbase_list_logs` | List server logs with filtering |
 | `pocketbase_get_log` | Get a single log entry by ID |
 | `pocketbase_log_stats` | Get hourly log statistics |
@@ -166,12 +195,15 @@ suggestion = "Use pocketbase_list_collections to see available collections"
 ```
 
 Error codes:
+- `NO_CONNECTION` - No PocketBase connection registered (call `pocketbase_connect`)
 - `CONNECTION_ERROR` - Cannot connect to PocketBase
-- `AUTH_REQUIRED` - Authentication needed
+- `AUTH_REQUIRED` - Authentication needed on this instance
 - `AUTH_FAILED` - Invalid credentials
 - `NOT_FOUND` - Resource not found
 - `VALIDATION_ERROR` - Invalid input data
 - `PERMISSION_DENIED` - Insufficient permissions
+- `RATE_LIMITED` - Server rate limit hit; back off
+- `SERVER_ERROR` - PocketBase server error
 
 ## Field Types and Special Handling
 
