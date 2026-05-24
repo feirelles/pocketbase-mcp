@@ -19,7 +19,6 @@ interface ConnectionEntry {
 }
 
 const registry = new Map<string, ConnectionEntry>();
-let legacyEnvAttempted = false;
 
 /**
  * Build a PocketBase client for `url` without storing it.
@@ -29,27 +28,6 @@ function buildClient(url: string): PocketBase {
   const client = new PocketBase(url);
   client.autoCancellation(false);
   return client;
-}
-
-/**
- * Lazy backward-compatibility: if no connections were registered explicitly
- * and `POCKETBASE_URL` is set, register it as 'default' (no health check —
- * preserves the pre-2.0 behavior where the env var was always trusted).
- *
- * The startup wiring in index.ts also calls `registerConnection` for the
- * env var with a real health check; this shim is the safety net for code
- * paths that bypass the startup hook (tests, embedding the service in
- * another runtime).
- *
- * One-shot per process; subsequent invocations are no-ops.
- */
-function maybeRegisterLegacyEnv(): void {
-  if (legacyEnvAttempted || registry.size > 0) return;
-  legacyEnvAttempted = true;
-  const url = process.env.POCKETBASE_URL;
-  if (!url) return;
-  const client = buildClient(url);
-  registry.set('default', { name: 'default', url, client, registeredAt: new Date() });
 }
 
 /**
@@ -132,8 +110,6 @@ export function createTransientClient(url: string): PocketBase {
  * - name omitted + multiple registered → VALIDATION_ERROR listing names
  */
 export function resolveInstanceEntry(name?: string): ConnectionEntry {
-  maybeRegisterLegacyEnv();
-
   if (name !== undefined) {
     const entry = registry.get(name);
     if (entry) return entry;
@@ -176,7 +152,6 @@ export function resetRegistry(): void {
     entry.client.authStore.clear();
   }
   registry.clear();
-  legacyEnvAttempted = false;
 }
 
 /** Get current authentication state for a connection. */
@@ -236,13 +211,12 @@ export function createErrorResponse(
 
 /**
  * Map an arbitrary thrown value to a structured ErrorResponse.
- * `urlHint` (optional) lets callers attribute connection errors to a
- * specific URL instead of leaking the legacy env var.
+ * `urlHint` (optional) attributes connection errors to a specific URL.
  */
 export function handlePocketBaseError(error: unknown, urlHint?: string): ErrorResponse {
   // Connection errors (fetch failure)
   if (error instanceof TypeError && error.message.includes('fetch')) {
-    const target = urlHint ?? process.env.POCKETBASE_URL ?? '(unknown)';
+    const target = urlHint ?? '(unknown)';
     return createErrorResponse(
       ErrorCodes.CONNECTION_ERROR,
       `Cannot connect to PocketBase server: ${target}`,

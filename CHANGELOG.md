@@ -14,16 +14,14 @@
 - **New error code `NO_CONNECTION`** so agents can distinguish "needs connect" from generic auth failures.
 
 ### Changed
-- **BREAKING**: Tools no longer rely on the `POCKETBASE_URL` environment variable being present at request time. If `POCKETBASE_URL` is set at startup the server auto-registers it as connection name `"default"` (backward-compat for existing single-instance setups).
+- **BREAKING**: The `POCKETBASE_URL` environment variable is no longer read by the server. Configure connections at runtime with `pocketbase_connect` (recommended in your MCP client config so the agent runs it on first use).
 - **BREAKING**: `getClient()` / `resetClient()` removed from `src/services/pocketbase.ts`. Use `resolveInstance(name?)` / `resetRegistry()`.
-- `handlePocketBaseError(error, urlHint?)` accepts an optional URL hint so connection errors attribute to the failing instance instead of leaking the env var.
+- `handlePocketBaseError(error, urlHint?)` accepts an optional URL hint so connection errors attribute to the failing instance.
 - Inline schemas in `src/tools/admin.ts` and `src/tools/files.ts` moved to `src/schemas/admin.ts` and `src/schemas/files.ts` for testability. Shared schema fragments live in `src/schemas/common.ts`.
 
 ### Migration
 
-If you used `POCKETBASE_URL` in env, **no action needed** — it auto-registers as `"default"` and all existing tool calls keep working without specifying `instance`.
-
-If you didn't use the env var (e.g., setting the URL inside the MCP server config but expecting it to be read elsewhere), call `pocketbase_connect` once at the start of your session:
+Drop `POCKETBASE_URL` from your MCP client config (it's now ignored). Have the agent call `pocketbase_connect` at the start of each session:
 
 ```
 pocketbase_connect name="local" url="http://localhost:8090"

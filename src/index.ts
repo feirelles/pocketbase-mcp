@@ -4,7 +4,7 @@
  *
  * Lets AI agents interact with one or more PocketBase instances through a
  * single MCP process. Connections are registered at runtime via
- * `pocketbase_connect`; if POCKETBASE_URL is set it auto-registers as "default".
+ * `pocketbase_connect`.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -16,7 +16,6 @@ import { registerRecordTools } from './tools/records.js';
 import { registerCollectionTools } from './tools/collections.js';
 import { registerAdminTools } from './tools/admin.js';
 import { registerFileTools } from './tools/files.js';
-import { registerConnection, listConnections } from './services/pocketbase.js';
 
 const server = new McpServer({
   name: 'pocketbase-mcp-server',
@@ -36,33 +35,11 @@ registerAdminTools(server);
 registerFileTools(server);
 
 async function main(): Promise<void> {
-  // Backward compatibility: if POCKETBASE_URL is set at startup, register
-  // it as "default". A reachability failure is logged but does NOT abort
-  // startup (the PB instance may come up after the MCP).
-  const legacyUrl = process.env.POCKETBASE_URL;
-  if (legacyUrl) {
-    try {
-      await registerConnection('default', legacyUrl);
-      console.error(`Auto-registered POCKETBASE_URL as 'default' → ${legacyUrl}`);
-    } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : (error as { error?: { message?: string } })?.error?.message ?? String(error);
-      console.error(`Failed to auto-register POCKETBASE_URL (${legacyUrl}): ${message}`);
-      console.error('Server is up; use pocketbase_connect once PocketBase is reachable.');
-    }
-  }
-
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   console.error('PocketBase MCP Server started');
-  const connected = listConnections();
-  if (connected.length > 0) {
-    console.error(`Registered connections: ${connected.map(c => `${c.name} → ${c.url}`).join(', ')}`);
-  } else {
-    console.error('No connections registered; call pocketbase_connect to add one.');
-  }
+  console.error('No connections registered; call pocketbase_connect to add one.');
 }
 
 main().catch((error) => {

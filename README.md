@@ -30,21 +30,12 @@ npm run build
 
 ## Configuration
 
-Two ways to point the MCP at a PocketBase instance:
-
-### A) Environment variable (single instance, auto-registered)
-
-```bash
-export POCKETBASE_URL="http://localhost:8090"
-```
-
-The URL is registered as the connection name `"default"` at startup, so existing single-PB workflows keep working with no extra setup. Tools that don't pass `instance` resolve to it automatically.
-
-### B) Runtime registration via `pocketbase_connect` (one or more instances)
-
-Leave the env var unset and have the agent call `pocketbase_connect` for each PocketBase you want available. This is the recommended approach for multi-instance workflows (e.g., comparing staging vs prod, or one Claude Code per project with each project pointing at its own PocketBase port).
+The MCP server takes no environment variables. The agent registers PocketBase instances at runtime by calling `pocketbase_connect`:
 
 ```
+pocketbase_connect name="local"   url="http://localhost:8090"
+
+# Or multiple, for parallel workflows:
 pocketbase_connect name="staging" url="http://localhost:8090"
 pocketbase_connect name="prod"    url="http://prod.example.com"
 
@@ -54,7 +45,11 @@ pocketbase_list_records instance="prod"    collection="posts"
 
 `pocketbase_connect` validates `/api/health` before storing — if PocketBase isn't reachable the registration fails and nothing is stored.
 
+When only one connection is registered, you can omit `instance` from every tool call — the server resolves it automatically. With two or more registered, the `instance` parameter is required.
+
 ## MCP Client Configuration
+
+The server takes no environment variables — the agent registers PocketBase instances at runtime with `pocketbase_connect`.
 
 ### Claude Desktop
 
@@ -65,10 +60,7 @@ Add to `~/.config/claude/claude_desktop_config.json`:
   "mcpServers": {
     "pocketbase": {
       "command": "node",
-      "args": ["/path/to/pocketbase-mcp/dist/index.js"],
-      "env": {
-        "POCKETBASE_URL": "http://localhost:8090"
-      }
+      "args": ["/path/to/pocketbase-mcp/dist/index.js"]
     }
   }
 }
@@ -84,10 +76,7 @@ Add to `.vscode/mcp.json`:
     "pocketbase": {
       "type": "stdio",
       "command": "node",
-      "args": ["${workspaceFolder}/pocketbase-mcp/dist/index.js"],
-      "env": {
-        "POCKETBASE_URL": "http://localhost:8090"
-      }
+      "args": ["${workspaceFolder}/pocketbase-mcp/dist/index.js"]
     }
   }
 }
@@ -289,10 +278,12 @@ pocketbase_get_file_url(
 
 ### Connection Issues
 
+If you get `NO_CONNECTION`: call `pocketbase_connect name=<x> url=<y>` first.
+
 If you get `CONNECTION_ERROR`:
 1. Verify PocketBase is running: `curl http://localhost:8090/api/health`
-2. Check `POCKETBASE_URL` is correctly set
-3. Ensure no firewall blocking the port
+2. Check the URL you passed to `pocketbase_connect`
+3. Ensure no firewall blocks the port
 
 ### Authentication Issues
 

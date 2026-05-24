@@ -9,7 +9,7 @@ This skill helps Claude work effectively with the PocketBase MCP server in this 
 
 ## The connect-first flow
 
-The very first thing to do in any session is establish **at least one connection**:
+The server starts with an empty registry. The very first thing to do in any session is establish **at least one connection**:
 
 ```
 pocketbase_connect name="local" url="http://localhost:8090"
@@ -17,7 +17,7 @@ pocketbase_connect name="local" url="http://localhost:8090"
 
 The server validates reachability via `/api/health` before storing the entry. If PocketBase isn't up the call returns `CONNECTION_ERROR` and nothing is registered — the agent should surface the message and let the user fix it (start PB, correct the URL, etc.).
 
-**Shortcut**: if the MCP was started with `POCKETBASE_URL` in the environment, the server auto-registers it as `"default"` at startup. Check with `pocketbase_list_connections` before assuming.
+If the user only mentioned a URL once at the start of the conversation, register it eagerly with a sensible name like `"local"` or the project name — don't keep asking on every turn. Use `pocketbase_list_connections` to confirm state if you're unsure.
 
 Once at least one connection exists, every other tool can be called. If only one connection is registered, you can omit `instance`; the server resolves to that one automatically.
 
@@ -107,7 +107,7 @@ Every tool accepts an optional `instance: string` parameter naming a registered 
 
 ## Authentication model (PocketBase v0.22+)
 
-- **Admin / superuser** lives in the system collection `_superusers`. Required for collection-schema, logs, and backup operations. `pocketbase_auth_admin` takes `email + password + (instance?)`.
+- **Admin / superuser** lives in the system collection `_superusers`. Required for collection-schema, logs, and backup operations. `pocketbase_auth_admin` takes `email + password + (instance?)`. You must `pocketbase_connect` first.
 - **Regular user** lives in any auth-type collection (default `users`). `pocketbase_auth_user` takes `identity + password` (the param is `identity`, NOT `email` — it accepts both email and username). Pass `identityField` to disambiguate.
 - **AuthStore is per-connection**. After `pocketbase_disconnect` and re-`pocketbase_connect` with the same name, you must re-authenticate.
 
@@ -284,7 +284,7 @@ Useful to verify a PB is up before deciding to `pocketbase_connect`.
 
 ## Don't
 
-- Don't call any tool before `pocketbase_connect` (unless `POCKETBASE_URL` auto-registered) — you'll just get `NO_CONNECTION`.
+- Don't call any tool before `pocketbase_connect` — you'll just get `NO_CONNECTION`.
 - Don't omit `instance` when 2+ connections are registered — the resolver errors.
 - Don't invent collection or field names — `pocketbase_list_collections` / `pocketbase_get_collection` first.
 - Don't pass `email` to `pocketbase_auth_user`; the parameter is `identity`.

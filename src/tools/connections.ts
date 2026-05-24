@@ -34,9 +34,8 @@ export function registerConnectionTools(server: McpServer): void {
 The server validates reachability by calling /api/health before storing the
 connection. If PocketBase is unreachable the connection is NOT registered.
 
-You MUST call this before any other pocketbase_* tool unless POCKETBASE_URL
-was set in the environment (in which case "default" is auto-registered at
-startup).
+You MUST call this before any other pocketbase_* tool — the server starts
+with an empty registry.
 
 Names are short identifiers ([a-zA-Z0-9_-]+) you choose, e.g. "local",
 "projA", "staging". The URL is the full PocketBase base URL.

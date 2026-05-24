@@ -361,32 +361,6 @@ describe('connection registry', () => {
     });
   });
 
-  describe('legacy POCKETBASE_URL shim', () => {
-    it('lazy-registers POCKETBASE_URL as "default" on first resolve', () => {
-      process.env.POCKETBASE_URL = 'http://legacy:8090';
-      const client = resolveInstance();
-      expect(client.baseURL).toBe('http://legacy:8090');
-      expect(listConnections()).toHaveLength(1);
-      expect(listConnections()[0].name).toBe('default');
-    });
-
-    it('does not run again after the first call (caches the attempt)', () => {
-      // No env var set during initial resolve → throws NO_CONNECTION
-      expect(() => resolveInstance()).toThrowError(
-        expect.objectContaining({
-          error: expect.objectContaining({ code: ErrorCodes.NO_CONNECTION }),
-        })
-      );
-      // Setting the env var afterwards is ignored — shim is one-shot
-      process.env.POCKETBASE_URL = 'http://late:8090';
-      expect(() => resolveInstance()).toThrowError(
-        expect.objectContaining({
-          error: expect.objectContaining({ code: ErrorCodes.NO_CONNECTION }),
-        })
-      );
-    });
-  });
-
   describe('getAuthState / requireAdminAuth', () => {
     it('getAuthState reports unauthenticated for a fresh connection', async () => {
       await registerConnection('local', 'http://localhost:8090');
