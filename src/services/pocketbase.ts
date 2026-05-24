@@ -229,6 +229,19 @@ export function handlePocketBaseError(error: unknown, urlHint?: string): ErrorRe
     const status = error.status;
     const data = error.data;
 
+    // status 0 in the PB SDK means the request never reached the server
+    // (network error, dead host, refused TCP) — surface it as CONNECTION_ERROR
+    // so the agent can react with pocketbase_connect / fix-the-URL logic
+    // instead of treating it as a generic server fault.
+    if (status === 0) {
+      const target = urlHint ?? '(unknown)';
+      return createErrorResponse(
+        ErrorCodes.CONNECTION_ERROR,
+        `Cannot connect to PocketBase server: ${target}`,
+        'Check that PocketBase is running and the connection URL is correct.'
+      );
+    }
+
     const fieldErrors = data?.data as Record<string, { message: string }> | undefined;
     const formattedFieldErrors = fieldErrors
       ? Object.fromEntries(
