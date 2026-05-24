@@ -499,9 +499,64 @@ describe('Collections Schemas Contract Tests', () => {
       const input = {
         name: 'posts',
       };
-      
+
       const result = DeleteCollectionInputSchema.safeParse(input);
       expect(result.success).toBe(true);
     });
+  });
+});
+
+describe('instance parameter coverage', () => {
+  // Smoke-check that every existing schema accepts an optional `instance`
+  // string and continues to default it to undefined.
+
+  const cases: Array<[string, { safeParse: (input: unknown) => { success: boolean } }, Record<string, unknown>]> = [
+    ['AuthAdminInputSchema', AuthAdminInputSchema, { email: 'a@b.c', password: 'x' }],
+    ['AuthUserInputSchema', AuthUserInputSchema, { identity: 'u', password: 'p' }],
+    ['GetAuthStatusInputSchema', GetAuthStatusInputSchema, {}],
+    ['LogoutInputSchema', LogoutInputSchema, {}],
+    ['ListRecordsInputSchema', ListRecordsInputSchema, { collection: 'posts' }],
+    ['GetRecordInputSchema', GetRecordInputSchema, { collection: 'posts', id: 'x' }],
+    ['CreateRecordInputSchema', CreateRecordInputSchema, { collection: 'posts', data: {} }],
+    ['UpdateRecordInputSchema', UpdateRecordInputSchema, { collection: 'posts', id: 'x', data: {} }],
+    ['DeleteRecordInputSchema', DeleteRecordInputSchema, { collection: 'posts', id: 'x' }],
+    ['ListCollectionsInputSchema', ListCollectionsInputSchema, {}],
+    ['GetCollectionInputSchema', GetCollectionInputSchema, { name: 'posts' }],
+    ['CreateCollectionInputSchema', CreateCollectionInputSchema, {
+      name: 'posts', type: 'base', fields: [{ name: 't', type: 'text' }],
+    }],
+    ['UpdateCollectionInputSchema', UpdateCollectionInputSchema, { name: 'posts' }],
+    ['DeleteCollectionInputSchema', DeleteCollectionInputSchema, { name: 'posts' }],
+  ];
+
+  for (const [name, schema, base] of cases) {
+    it(`${name} accepts instance="local"`, () => {
+      expect(schema.safeParse({ ...base, instance: 'local' }).success).toBe(true);
+    });
+    it(`${name} accepts a payload without instance`, () => {
+      expect(schema.safeParse(base).success).toBe(true);
+    });
+    it(`${name} rejects empty-string instance`, () => {
+      expect(schema.safeParse({ ...base, instance: '' }).success).toBe(false);
+    });
+  }
+});
+
+describe('LogoutInputSchema extras', () => {
+  it('accepts all=true with no instance', () => {
+    const r = LogoutInputSchema.safeParse({ all: true });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts all=false (default) with instance set', () => {
+    const r = LogoutInputSchema.safeParse({ instance: 'local' });
+    expect(r.success).toBe(true);
+  });
+
+  it('also accepts all=true + instance — handler enforces mutual exclusion', () => {
+    // The Zod schema is permissive on this combination; the tool handler
+    // returns VALIDATION_ERROR. This contract documents that intent.
+    const r = LogoutInputSchema.safeParse({ all: true, instance: 'local' });
+    expect(r.success).toBe(true);
   });
 });

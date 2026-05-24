@@ -2,7 +2,7 @@
  * Collection Management Tools
  */
 
-import { getClient, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
+import { resolveInstance, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import {
   ListCollectionsInputSchema,
@@ -39,8 +39,8 @@ Examples:
     ListCollectionsInputSchema.shape,
     async (params: ListCollectionsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const options: { filter?: string } = {};
         if (params.filter) {
@@ -98,8 +98,8 @@ Examples:
     GetCollectionInputSchema.shape,
     async (params: GetCollectionInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const collection = await pb.collections.getOne(params.name);
         
@@ -265,8 +265,8 @@ Examples:
     CreateCollectionInputSchema.shape,
     async (params: CreateCollectionInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         // Add automatic system fields if not already present
         const userFields = params.fields || [];
@@ -440,8 +440,8 @@ Examples:
     UpdateCollectionInputSchema.shape,
     async (params: UpdateCollectionInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         // First get the collection to get its ID
         const existing = await pb.collections.getOne(params.name);
@@ -581,8 +581,8 @@ Examples:
     DeleteCollectionInputSchema.shape,
     async (params: DeleteCollectionInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         // First get the collection to get its ID
         const existing = await pb.collections.getOne(params.name);

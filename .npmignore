@@ -13,6 +13,7 @@ pocketbase/
 .gitignore
 .specify/
 .copilot-skills-config.yaml
+.claude/
 
 # Source files (dist is published)
 src/

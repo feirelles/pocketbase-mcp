@@ -3,31 +3,7 @@
  */
 
 import { z } from 'zod';
-import { DEFAULT_LIMIT, MAX_LIMIT } from '../constants.js';
-
-/** Common output format parameter */
-const formatParam = z.enum(['toml', 'json']).default('toml')
-  .describe('Output format: toml (default, compact) or json');
-
-/** Common pagination parameters */
-const paginationParams = {
-  page: z.number().int().min(1).default(1)
-    .describe('Page number (1-indexed)'),
-  perPage: z.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT)
-    .describe(`Items per page (max ${MAX_LIMIT})`),
-};
-
-/** Common query parameters */
-const queryParams = {
-  filter: z.string().optional()
-    .describe('PocketBase filter expression (e.g., status="published")'),
-  sort: z.string().optional()
-    .describe('Sort field(s), prefix with - for descending (e.g., -created)'),
-  fields: z.string().optional()
-    .describe('Comma-separated fields to return (e.g., id,title,created)'),
-  expand: z.string().optional()
-    .describe('Relations to expand (e.g., author,comments)'),
-};
+import { formatParam, instanceParam, paginationParams, queryParams } from './common.js';
 
 /**
  * Input schema for listing records
@@ -40,6 +16,7 @@ export const ListRecordsInputSchema = z.object({
   skipTotal: z.boolean().optional()
     .describe('Skip total count query for better performance (totalItems/totalPages will be -1)'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type ListRecordsInput = z.infer<typeof ListRecordsInputSchema>;
@@ -57,6 +34,7 @@ export const GetRecordInputSchema = z.object({
   expand: z.string().optional()
     .describe('Relations to expand'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type GetRecordInput = z.infer<typeof GetRecordInputSchema>;
@@ -74,6 +52,7 @@ export const CreateRecordInputSchema = z.object({
   fields: z.string().optional()
     .describe('Comma-separated fields to return in the response'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type CreateRecordInput = z.infer<typeof CreateRecordInputSchema>;
@@ -93,6 +72,7 @@ export const UpdateRecordInputSchema = z.object({
   fields: z.string().optional()
     .describe('Comma-separated fields to return in the response'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type UpdateRecordInput = z.infer<typeof UpdateRecordInputSchema>;
@@ -106,6 +86,7 @@ export const DeleteRecordInputSchema = z.object({
   id: z.string().min(1, 'Record ID required')
     .describe('Record ID to delete'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type DeleteRecordInput = z.infer<typeof DeleteRecordInputSchema>;

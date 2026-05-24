@@ -2,64 +2,35 @@
  * Admin Tools - Health, Logs, Backups, Settings
  */
 
-import { z } from 'zod';
-import { getClient, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
+import {
+  resolveInstance,
+  requireAdminAuth,
+  handlePocketBaseError,
+  createErrorResponse,
+  createTransientClient,
+} from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
+import { ErrorCodes } from '../constants.js';
+import {
+  HealthCheckInputSchema,
+  ListLogsInputSchema,
+  GetLogInputSchema,
+  LogStatsInputSchema,
+  ListBackupsInputSchema,
+  CreateBackupInputSchema,
+  RestoreBackupInputSchema,
+  DeleteBackupInputSchema,
+  type HealthCheckInput,
+  type ListLogsInput,
+  type GetLogInput,
+  type LogStatsInput,
+  type ListBackupsInput,
+  type CreateBackupInput,
+  type RestoreBackupInput,
+  type DeleteBackupInput,
+} from '../schemas/admin.js';
 import type { OutputFormat } from '../types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-// Schemas for admin tools
-const FormatSchema = z.enum(['toml', 'json']).default('toml');
-
-const HealthCheckInputSchema = z.object({
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const ListLogsInputSchema = z.object({
-  page: z.number().int().min(1).default(1).describe('Page number (1-indexed)'),
-  perPage: z.number().int().min(1).max(500).default(50).describe('Items per page'),
-  filter: z.string().optional().describe('Filter expression (e.g., level="error")'),
-  sort: z.string().optional().describe('Sort field(s), prefix with - for descending'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const GetLogInputSchema = z.object({
-  id: z.string().min(1).describe('Log entry ID'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const LogStatsInputSchema = z.object({
-  filter: z.string().optional().describe('Filter expression for stats'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const ListBackupsInputSchema = z.object({
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const CreateBackupInputSchema = z.object({
-  name: z.string().optional().describe('Backup file name (optional, auto-generated if not provided). Must be in format [a-z0-9_-].zip'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const RestoreBackupInputSchema = z.object({
-  name: z.string().min(1).describe('Backup file name to restore'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const DeleteBackupInputSchema = z.object({
-  name: z.string().min(1).describe('Backup file name to delete'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-type HealthCheckInput = z.infer<typeof HealthCheckInputSchema>;
-type ListLogsInput = z.infer<typeof ListLogsInputSchema>;
-type GetLogInput = z.infer<typeof GetLogInputSchema>;
-type LogStatsInput = z.infer<typeof LogStatsInputSchema>;
-type ListBackupsInput = z.infer<typeof ListBackupsInputSchema>;
-type CreateBackupInput = z.infer<typeof CreateBackupInputSchema>;
-type RestoreBackupInput = z.infer<typeof RestoreBackupInputSchema>;
-type DeleteBackupInput = z.infer<typeof DeleteBackupInputSchema>;
 
 /**
  * Register all admin tools with the MCP server
@@ -68,33 +39,56 @@ export function registerAdminTools(server: McpServer): void {
   // Health Check Tool
   server.tool(
     'pocketbase_health_check',
-    `Check the health status of the PocketBase server.
+    `Check the health status of a PocketBase server.
 
-Returns server health information including version and status.
-Does not require authentication.
+No authentication required. Accepts either:
+- instance=<name>: probe a registered connection (default behavior, like other tools)
+- url=<base-url>: probe an ad-hoc URL without registering — useful to
+  test reachability before pocketbase_connect
+
+If neither is provided, falls back to the resolved connection (the only
+registered one, or NO_CONNECTION if none).
 
 Examples:
-- Check health: (no params needed)`,
+- Ad-hoc probe: url="http://localhost:8090"
+- Named: instance="projA"
+- Implicit (one registered): (no params)`,
     HealthCheckInputSchema.shape,
     async (params: HealthCheckInput) => {
       try {
-        const pb = getClient();
+        if (params.instance && params.url) {
+          const err = createErrorResponse(
+            ErrorCodes.VALIDATION_ERROR,
+            'health_check: `instance` and `url` are mutually exclusive',
+            'Pass exactly one (or neither, to use the resolved connection).'
+          );
+          return {
+            content: [{ type: 'text', text: format(err, params.format as OutputFormat) }],
+            isError: true,
+          };
+        }
+
+        const pb = params.url
+          ? createTransientClient(params.url)
+          : resolveInstance(params.instance);
+
         const health = await pb.health.check();
-        
+
         const output = {
           status: health.code === 200 ? 'healthy' : 'unhealthy',
           code: health.code,
           message: health.message,
           data: health.data,
+          target: params.url ?? params.instance ?? '(resolved)',
         };
-        
+
         const text = format(output, params.format as OutputFormat);
-        
+
         return {
           content: [{ type: 'text', text }],
         };
       } catch (error) {
-        const errorResponse = handlePocketBaseError(error);
+        const errorResponse = handlePocketBaseError(error, params.url);
         return {
           content: [{ type: 'text', text: format(errorResponse, params.format as OutputFormat) }],
           isError: true,
@@ -120,8 +114,8 @@ Examples:
     ListLogsInputSchema.shape,
     async (params: ListLogsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.filter) options.filter = params.filter;
@@ -172,8 +166,8 @@ Examples:
     GetLogInputSchema.shape,
     async (params: GetLogInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const log = await pb.logs.getOne(params.id);
         
@@ -215,8 +209,8 @@ Examples:
     LogStatsInputSchema.shape,
     async (params: LogStatsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.filter) options.filter = params.filter;
@@ -257,8 +251,8 @@ Examples:
     ListBackupsInputSchema.shape,
     async (params: ListBackupsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const backups = await pb.backups.getFullList();
         
@@ -302,8 +296,8 @@ Examples:
     CreateBackupInputSchema.shape,
     async (params: CreateBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.create(params.name || '');
         
@@ -345,8 +339,8 @@ Examples:
     RestoreBackupInputSchema.shape,
     async (params: RestoreBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.restore(params.name);
         
@@ -386,8 +380,8 @@ Examples:
     DeleteBackupInputSchema.shape,
     async (params: DeleteBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.delete(params.name);
         

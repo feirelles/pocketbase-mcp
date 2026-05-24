@@ -2,7 +2,14 @@
  * Authentication Tools
  */
 
-import { getClient, getAuthState, handlePocketBaseError } from '../services/pocketbase.js';
+import {
+  resolveInstance,
+  getAuthState,
+  listConnections,
+  handlePocketBaseError,
+  createErrorResponse,
+} from '../services/pocketbase.js';
+import { ErrorCodes } from '../constants.js';
 import { format } from '../formatters/index.js';
 import {
   AuthAdminInputSchema,
@@ -36,7 +43,7 @@ Examples:
     AuthAdminInputSchema.shape,
     async (params: AuthAdminInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         // Authenticate as superuser (PocketBase v0.21+ uses _superusers collection)
         const authData = await pb.collection('_superusers').authWithPassword(
@@ -85,7 +92,7 @@ Examples:
     AuthUserInputSchema.shape,
     async (params: AuthUserInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         // Build auth options
         const authOptions: { identity?: string } = {};
@@ -140,7 +147,7 @@ Use this to check if you need to authenticate before performing operations.`,
     GetAuthStatusInputSchema.shape,
     async (params: GetAuthStatusInput) => {
       try {
-        const authState = getAuthState();
+        const authState = getAuthState(params.instance);
         const text = format(authState, params.format as OutputFormat);
         
         return {
@@ -159,22 +166,56 @@ Use this to check if you need to authenticate before performing operations.`,
   // Logout Tool
   server.tool(
     'pocketbase_logout',
-    `Clear current authentication session.
+    `Clear the authentication session on one or all registered connections.
 
-After logout, you will need to authenticate again to access protected resources.`,
+By default targets the resolved instance (the only registered one, or the
+one named by \`instance\`). Pass \`all: true\` (and omit \`instance\`) to
+clear every registered connection at once.
+
+Examples:
+- One: instance="projA"
+- All: all=true`,
     LogoutInputSchema.shape,
     async (params: LogoutInput) => {
       try {
-        const pb = getClient();
+        if (params.all && params.instance !== undefined) {
+          const err = createErrorResponse(
+            ErrorCodes.VALIDATION_ERROR,
+            'logout: `all` and `instance` are mutually exclusive',
+            'Pass either `instance=<name>` to clear one, or `all=true` to clear every connection.'
+          );
+          return {
+            content: [{ type: 'text', text: format(err, params.format as OutputFormat) }],
+            isError: true,
+          };
+        }
+
+        if (params.all) {
+          const names = listConnections().map(c => c.name);
+          for (const name of names) {
+            resolveInstance(name).authStore.clear();
+          }
+          const output = {
+            success: true,
+            cleared: names,
+            message: `Cleared authStore on ${names.length} connection(s)`,
+          };
+          return {
+            content: [{ type: 'text', text: format(output, params.format as OutputFormat) }],
+          };
+        }
+
+        const pb = resolveInstance(params.instance);
         pb.authStore.clear();
-        
+
         const output = {
           success: true,
+          instance: params.instance ?? '(resolved)',
           message: 'Successfully logged out',
         };
-        
+
         const text = format(output, params.format as OutputFormat);
-        
+
         return {
           content: [{ type: 'text', text }],
         };

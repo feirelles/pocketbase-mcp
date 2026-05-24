@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.0.0] - 2026-05-24
+
+### Added
+- **Multi-instance support via runtime connection registry.** A single MCP process can now hold multiple PocketBase connections simultaneously, each with isolated auth state.
+- **New tools**:
+  - `pocketbase_connect(name, url)` — register a connection (validates `/api/health` before storing).
+  - `pocketbase_disconnect(name)` — remove a connection and clear its authStore.
+  - `pocketbase_list_connections()` — snapshot of registered connections and their auth state.
+- **New optional `instance` parameter on every existing tool**, naming which registered connection to operate against. Omitted ⇒ uses the only registered connection (or errors if 0 / multiple).
+- **`pocketbase_health_check`** gains an `url` parameter for ad-hoc probes without registering a connection (mutually exclusive with `instance`).
+- **`pocketbase_logout`** gains `all: boolean` to clear authStore on every registered connection in one call.
+- **New error code `NO_CONNECTION`** so agents can distinguish "needs connect" from generic auth failures.
+
+### Changed
+- **BREAKING**: The `POCKETBASE_URL` environment variable is no longer read by the server. Configure connections at runtime with `pocketbase_connect` (recommended in your MCP client config so the agent runs it on first use).
+- **BREAKING**: `getClient()` / `resetClient()` removed from `src/services/pocketbase.ts`. Use `resolveInstance(name?)` / `resetRegistry()`.
+- `handlePocketBaseError(error, urlHint?)` accepts an optional URL hint so connection errors attribute to the failing instance.
+- Inline schemas in `src/tools/admin.ts` and `src/tools/files.ts` moved to `src/schemas/admin.ts` and `src/schemas/files.ts` for testability. Shared schema fragments live in `src/schemas/common.ts`.
+
+### Migration
+
+Drop `POCKETBASE_URL` from your MCP client config (it's now ignored). Have the agent call `pocketbase_connect` at the start of each session:
+
+```
+pocketbase_connect name="local" url="http://localhost:8090"
+```
+
+For multi-instance setups (e.g., one agent driving two PocketBases):
+
+```
+pocketbase_connect name="staging" url="http://localhost:8090"
+pocketbase_connect name="prod"    url="http://prod.example.com"
+pocketbase_list_records instance="staging" collection="posts"
+pocketbase_list_records instance="prod"    collection="posts"
+```
+
 ## [1.3.0] - 2026-01-20
 
 ### Added

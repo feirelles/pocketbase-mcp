@@ -2,8 +2,7 @@
  * Record Tools - Query, Create, Update, Delete
  */
 
-import { z } from 'zod';
-import { getClient, handlePocketBaseError, isErrorResponse } from '../services/pocketbase.js';
+import { resolveInstance, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import { MAX_RESPONSE_SIZE } from '../constants.js';
 import {
@@ -41,7 +40,7 @@ Examples:
     ListRecordsInputSchema.shape,
     async (params: ListRecordsInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.filter) options.filter = params.filter;
@@ -110,7 +109,7 @@ Examples:
     GetRecordInputSchema.shape,
     async (params: GetRecordInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.fields) options.fields = params.fields;
@@ -151,7 +150,7 @@ Examples:
     CreateRecordInputSchema.shape,
     async (params: CreateRecordInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.expand) options.expand = params.expand;
@@ -189,7 +188,7 @@ Examples:
     UpdateRecordInputSchema.shape,
     async (params: UpdateRecordInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.expand) options.expand = params.expand;
@@ -225,7 +224,7 @@ Examples:
     DeleteRecordInputSchema.shape,
     async (params: DeleteRecordInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         await pb.collection(params.collection).delete(params.id);
         

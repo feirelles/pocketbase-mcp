@@ -3,15 +3,11 @@
  */
 
 import { z } from 'zod';
-import { DEFAULT_LIMIT, MAX_LIMIT } from '../constants.js';
-
-/** Common output format parameter */
-const formatParam = z.enum(['toml', 'json']).default('toml')
-  .describe('Output format: toml (default, compact) or json');
+import { formatParam, instanceParam, paginationParams } from './common.js';
 
 /** Field type enum */
 const fieldTypeEnum = z.enum([
-  'text', 'number', 'bool', 'email', 'url', 'date', 
+  'text', 'number', 'bool', 'email', 'url', 'date',
   'select', 'json', 'file', 'relation', 'editor', 'autodate', 'geoPoint'
 ]);
 
@@ -27,13 +23,11 @@ const fieldDefinitionSchema = z.object({
  * Input schema for listing collections
  */
 export const ListCollectionsInputSchema = z.object({
-  page: z.number().int().min(1).default(1)
-    .describe('Page number (1-indexed)'),
-  perPage: z.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT)
-    .describe('Items per page'),
+  ...paginationParams,
   filter: z.string().optional()
     .describe('Filter expression (e.g., type="base")'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type ListCollectionsInput = z.infer<typeof ListCollectionsInputSchema>;
@@ -45,6 +39,7 @@ export const GetCollectionInputSchema = z.object({
   name: z.string().min(1, 'Collection name required')
     .describe('Collection name or ID'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type GetCollectionInput = z.infer<typeof GetCollectionInputSchema>;
@@ -76,6 +71,7 @@ export const CreateCollectionInputSchema = z.object({
   indexes: z.array(z.string()).optional()
     .describe('Index definitions'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type CreateCollectionInput = z.infer<typeof CreateCollectionInputSchema>;
@@ -97,6 +93,7 @@ export const UpdateCollectionInputSchema = z.object({
   deleteRule: z.string().nullable().optional(),
   indexes: z.array(z.string()).optional(),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type UpdateCollectionInput = z.infer<typeof UpdateCollectionInputSchema>;
@@ -108,6 +105,7 @@ export const DeleteCollectionInputSchema = z.object({
   name: z.string().min(1)
     .describe('Collection name to delete'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type DeleteCollectionInput = z.infer<typeof DeleteCollectionInputSchema>;
