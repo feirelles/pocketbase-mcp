@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { formatParam } from './common.js';
+import { formatParam, instanceParam } from './common.js';
 
 export const GetFileUrlInputSchema = z.object({
   collection: z.string().min(1).describe('Collection name or ID'),
@@ -14,6 +14,7 @@ export const GetFileUrlInputSchema = z.object({
   ),
   download: z.boolean().optional().describe('If true, returns URL with download header'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type GetFileUrlInput = z.infer<typeof GetFileUrlInputSchema>;

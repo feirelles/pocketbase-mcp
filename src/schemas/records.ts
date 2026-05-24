@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { formatParam, paginationParams, queryParams } from './common.js';
+import { formatParam, instanceParam, paginationParams, queryParams } from './common.js';
 
 /**
  * Input schema for listing records
@@ -16,6 +16,7 @@ export const ListRecordsInputSchema = z.object({
   skipTotal: z.boolean().optional()
     .describe('Skip total count query for better performance (totalItems/totalPages will be -1)'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type ListRecordsInput = z.infer<typeof ListRecordsInputSchema>;
@@ -33,6 +34,7 @@ export const GetRecordInputSchema = z.object({
   expand: z.string().optional()
     .describe('Relations to expand'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type GetRecordInput = z.infer<typeof GetRecordInputSchema>;
@@ -50,6 +52,7 @@ export const CreateRecordInputSchema = z.object({
   fields: z.string().optional()
     .describe('Comma-separated fields to return in the response'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type CreateRecordInput = z.infer<typeof CreateRecordInputSchema>;
@@ -69,6 +72,7 @@ export const UpdateRecordInputSchema = z.object({
   fields: z.string().optional()
     .describe('Comma-separated fields to return in the response'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type UpdateRecordInput = z.infer<typeof UpdateRecordInputSchema>;
@@ -82,6 +86,7 @@ export const DeleteRecordInputSchema = z.object({
   id: z.string().min(1, 'Record ID required')
     .describe('Record ID to delete'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type DeleteRecordInput = z.infer<typeof DeleteRecordInputSchema>;

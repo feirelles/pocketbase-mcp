@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { formatParam, paginationParams } from './common.js';
+import { formatParam, instanceParam, paginationParams } from './common.js';
 
 /** Field type enum */
 const fieldTypeEnum = z.enum([
@@ -27,6 +27,7 @@ export const ListCollectionsInputSchema = z.object({
   filter: z.string().optional()
     .describe('Filter expression (e.g., type="base")'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type ListCollectionsInput = z.infer<typeof ListCollectionsInputSchema>;
@@ -38,6 +39,7 @@ export const GetCollectionInputSchema = z.object({
   name: z.string().min(1, 'Collection name required')
     .describe('Collection name or ID'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type GetCollectionInput = z.infer<typeof GetCollectionInputSchema>;
@@ -69,6 +71,7 @@ export const CreateCollectionInputSchema = z.object({
   indexes: z.array(z.string()).optional()
     .describe('Index definitions'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type CreateCollectionInput = z.infer<typeof CreateCollectionInputSchema>;
@@ -90,6 +93,7 @@ export const UpdateCollectionInputSchema = z.object({
   deleteRule: z.string().nullable().optional(),
   indexes: z.array(z.string()).optional(),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type UpdateCollectionInput = z.infer<typeof UpdateCollectionInputSchema>;
@@ -101,6 +105,7 @@ export const DeleteCollectionInputSchema = z.object({
   name: z.string().min(1)
     .describe('Collection name to delete'),
   format: formatParam,
+  instance: instanceParam,
 }).strict();
 
 export type DeleteCollectionInput = z.infer<typeof DeleteCollectionInputSchema>;
