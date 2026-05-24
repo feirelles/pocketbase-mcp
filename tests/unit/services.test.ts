@@ -2,14 +2,67 @@
  * Unit tests for PocketBase service
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { 
-  createErrorResponse, 
-  handlePocketBaseError, 
-  isErrorResponse 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  createErrorResponse,
+  handlePocketBaseError,
+  isErrorResponse,
+  registerConnection,
+  unregisterConnection,
+  listConnections,
+  resolveInstance,
+  resolveInstanceEntry,
+  resetRegistry,
+  getAuthState,
+  requireAdminAuth,
 } from '../../src/services/pocketbase.js';
 import { ErrorCodes } from '../../src/constants.js';
 import { ClientResponseError } from 'pocketbase';
+
+// Mock the pocketbase SDK so the registry tests don't make real HTTP calls.
+// Each `new PocketBase(url)` returns a fake client with a configurable
+// `health.check()` and a mutable `authStore` honoring the bits we read.
+vi.mock('pocketbase', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pocketbase')>();
+
+  class FakeAuthStore {
+    isValid = false;
+    isSuperuser = false;
+    record: Record<string, unknown> | null = null;
+    clear() {
+      this.isValid = false;
+      this.isSuperuser = false;
+      this.record = null;
+    }
+  }
+
+  // Per-URL behavior knobs; tests configure via `__pbControl(url, ...)`.
+  const control = new Map<string, { healthFails?: boolean }>();
+  (globalThis as any).__pbControl = (url: string, cfg: { healthFails?: boolean }) => {
+    control.set(url, cfg);
+  };
+  (globalThis as any).__pbResetControl = () => control.clear();
+
+  class FakePocketBase {
+    baseURL: string;
+    authStore = new FakeAuthStore();
+    health = {
+      check: async () => {
+        if (control.get(this.baseURL)?.healthFails) {
+          throw new TypeError('fetch failed');
+        }
+        return { code: 200, message: 'API is healthy.', data: {} };
+      },
+    };
+    constructor(url: string) { this.baseURL = url; }
+    autoCancellation(_v: boolean) { return this; }
+  }
+
+  return {
+    ...actual,
+    default: FakePocketBase,
+  };
+});
 
 describe('createErrorResponse', () => {
   it('should create error response with required fields', () => {
@@ -182,9 +235,173 @@ describe('handlePocketBaseError', () => {
       status: 500,
       data: { message: 'Internal server error' },
     });
-    
+
     const result = handlePocketBaseError(error);
-    
+
     expect(result.error.code).toBe('SERVER_ERROR');
+  });
+
+  it('should attribute connection errors to urlHint when provided', () => {
+    const error = new TypeError('fetch failed');
+    const result = handlePocketBaseError(error, 'http://example.test:8090');
+
+    expect(result.error.code).toBe('CONNECTION_ERROR');
+    expect(result.error.message).toContain('http://example.test:8090');
+  });
+});
+
+describe('connection registry', () => {
+  beforeEach(() => {
+    delete process.env.POCKETBASE_URL;
+    (globalThis as any).__pbResetControl?.();
+    resetRegistry();
+  });
+
+  afterEach(() => {
+    delete process.env.POCKETBASE_URL;
+    (globalThis as any).__pbResetControl?.();
+    resetRegistry();
+  });
+
+  describe('registerConnection', () => {
+    it('registers a connection after a successful health check', async () => {
+      const entry = await registerConnection('local', 'http://localhost:8090');
+      expect(entry.name).toBe('local');
+      expect(entry.url).toBe('http://localhost:8090');
+      expect(listConnections()).toHaveLength(1);
+    });
+
+    it('is idempotent for the same name + same URL (re-pings)', async () => {
+      const first = await registerConnection('local', 'http://localhost:8090');
+      const second = await registerConnection('local', 'http://localhost:8090');
+      expect(second).toBe(first);
+      expect(listConnections()).toHaveLength(1);
+    });
+
+    it('rejects same name with a different URL', async () => {
+      await registerConnection('local', 'http://localhost:8090');
+      await expect(
+        registerConnection('local', 'http://localhost:9999')
+      ).rejects.toMatchObject({
+        error: { code: ErrorCodes.VALIDATION_ERROR },
+      });
+      // Original connection survives.
+      expect(listConnections()).toHaveLength(1);
+      expect(listConnections()[0].url).toBe('http://localhost:8090');
+    });
+
+    it('throws CONNECTION_ERROR and does not register when health check fails', async () => {
+      (globalThis as any).__pbControl('http://nope:1234', { healthFails: true });
+      await expect(
+        registerConnection('bad', 'http://nope:1234')
+      ).rejects.toMatchObject({
+        error: { code: ErrorCodes.CONNECTION_ERROR },
+      });
+      expect(listConnections()).toHaveLength(0);
+    });
+  });
+
+  describe('unregisterConnection', () => {
+    it('removes a known connection and returns true', async () => {
+      await registerConnection('local', 'http://localhost:8090');
+      expect(unregisterConnection('local')).toBe(true);
+      expect(listConnections()).toHaveLength(0);
+    });
+
+    it('returns false for an unknown name', () => {
+      expect(unregisterConnection('nope')).toBe(false);
+    });
+  });
+
+  describe('resolveInstance / resolveInstanceEntry', () => {
+    it('throws NO_CONNECTION when no instances are registered and name is omitted', () => {
+      expect(() => resolveInstance()).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: ErrorCodes.NO_CONNECTION }),
+        })
+      );
+    });
+
+    it('returns the only registered instance when name is omitted', async () => {
+      await registerConnection('only', 'http://localhost:8090');
+      const client = resolveInstance();
+      expect(client.baseURL).toBe('http://localhost:8090');
+    });
+
+    it('throws VALIDATION_ERROR listing names when multiple are registered and name is omitted', async () => {
+      await registerConnection('a', 'http://localhost:8090');
+      await registerConnection('b', 'http://localhost:8091');
+      expect(() => resolveInstance()).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: ErrorCodes.VALIDATION_ERROR,
+            suggestion: expect.stringContaining('a, b'),
+          }),
+        })
+      );
+    });
+
+    it('returns the named instance when present', async () => {
+      await registerConnection('a', 'http://localhost:8090');
+      await registerConnection('b', 'http://localhost:8091');
+      const entry = resolveInstanceEntry('b');
+      expect(entry.url).toBe('http://localhost:8091');
+    });
+
+    it('throws VALIDATION_ERROR listing registered names when the named instance is missing', async () => {
+      await registerConnection('a', 'http://localhost:8090');
+      expect(() => resolveInstance('missing')).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: ErrorCodes.VALIDATION_ERROR,
+            suggestion: expect.stringContaining('a'),
+          }),
+        })
+      );
+    });
+  });
+
+  describe('legacy POCKETBASE_URL shim', () => {
+    it('lazy-registers POCKETBASE_URL as "default" on first resolve', () => {
+      process.env.POCKETBASE_URL = 'http://legacy:8090';
+      const client = resolveInstance();
+      expect(client.baseURL).toBe('http://legacy:8090');
+      expect(listConnections()).toHaveLength(1);
+      expect(listConnections()[0].name).toBe('default');
+    });
+
+    it('does not run again after the first call (caches the attempt)', () => {
+      // No env var set during initial resolve → throws NO_CONNECTION
+      expect(() => resolveInstance()).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: ErrorCodes.NO_CONNECTION }),
+        })
+      );
+      // Setting the env var afterwards is ignored — shim is one-shot
+      process.env.POCKETBASE_URL = 'http://late:8090';
+      expect(() => resolveInstance()).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: ErrorCodes.NO_CONNECTION }),
+        })
+      );
+    });
+  });
+
+  describe('getAuthState / requireAdminAuth', () => {
+    it('getAuthState reports unauthenticated for a fresh connection', async () => {
+      await registerConnection('local', 'http://localhost:8090');
+      const state = getAuthState('local');
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.authType).toBeNull();
+    });
+
+    it('requireAdminAuth throws AUTH_REQUIRED when not a superuser', async () => {
+      await registerConnection('local', 'http://localhost:8090');
+      expect(() => requireAdminAuth('local')).toThrowError(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: ErrorCodes.AUTH_REQUIRED }),
+        })
+      );
+    });
   });
 });

@@ -4,18 +4,18 @@
 
 import type { ErrorCode } from './constants.js';
 
-/** Server configuration */
-export interface ServerConfig {
-  /** PocketBase instance URL (from POCKETBASE_URL env var) */
-  baseUrl: string;
-  /** Default output format */
-  defaultFormat: 'toml' | 'json';
-  /** Default pagination limit */
-  defaultLimit: number;
-  /** Maximum pagination limit */
-  maxLimit: number;
-  /** Maximum response size in characters */
-  maxResponseSize: number;
+/** Snapshot of a registered PocketBase connection (for pocketbase_list_connections). */
+export interface ConnectionInfo {
+  /** Connection name as registered via pocketbase_connect. */
+  name: string;
+  /** PocketBase base URL. */
+  url: string;
+  /** Whether the connection currently has a valid auth session. */
+  isAuthenticated: boolean;
+  /** Type of authentication, if any. */
+  authType: 'admin' | 'user' | null;
+  /** ISO timestamp of when the connection was registered. */
+  registeredAt: string;
 }
 
 /** Authentication state */

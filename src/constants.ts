@@ -17,6 +17,7 @@ export const DEFAULT_FORMAT: 'toml' | 'json' = 'toml';
 /** Error codes for structured error responses */
 export const ErrorCodes = {
   CONNECTION_ERROR: 'CONNECTION_ERROR',
+  NO_CONNECTION: 'NO_CONNECTION',
   AUTH_REQUIRED: 'AUTH_REQUIRED',
   AUTH_FAILED: 'AUTH_FAILED',
   NOT_FOUND: 'NOT_FOUND',
