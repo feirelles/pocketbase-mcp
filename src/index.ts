@@ -16,7 +16,7 @@ import { registerRecordTools } from './tools/records.js';
 import { registerCollectionTools } from './tools/collections.js';
 import { registerAdminTools } from './tools/admin.js';
 import { registerFileTools } from './tools/files.js';
-import { registerConnection } from './services/pocketbase.js';
+import { registerConnection, listConnections } from './services/pocketbase.js';
 
 const server = new McpServer({
   name: 'pocketbase-mcp-server',
@@ -57,11 +57,12 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   console.error('PocketBase MCP Server started');
-  console.error(
-    legacyUrl
-      ? `Default connection: ${legacyUrl}`
-      : 'No POCKETBASE_URL in env; call pocketbase_connect to register an instance.'
-  );
+  const connected = listConnections();
+  if (connected.length > 0) {
+    console.error(`Registered connections: ${connected.map(c => `${c.name} → ${c.url}`).join(', ')}`);
+  } else {
+    console.error('No connections registered; call pocketbase_connect to add one.');
+  }
 }
 
 main().catch((error) => {

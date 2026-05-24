@@ -2,8 +2,15 @@
  * Admin Tools - Health, Logs, Backups, Settings
  */
 
-import { getClient, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
+import {
+  resolveInstance,
+  requireAdminAuth,
+  handlePocketBaseError,
+  createErrorResponse,
+  createTransientClient,
+} from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
+import { ErrorCodes } from '../constants.js';
 import {
   HealthCheckInputSchema,
   ListLogsInputSchema,
@@ -32,33 +39,56 @@ export function registerAdminTools(server: McpServer): void {
   // Health Check Tool
   server.tool(
     'pocketbase_health_check',
-    `Check the health status of the PocketBase server.
+    `Check the health status of a PocketBase server.
 
-Returns server health information including version and status.
-Does not require authentication.
+No authentication required. Accepts either:
+- instance=<name>: probe a registered connection (default behavior, like other tools)
+- url=<base-url>: probe an ad-hoc URL without registering — useful to
+  test reachability before pocketbase_connect
+
+If neither is provided, falls back to the resolved connection (the only
+registered one, or NO_CONNECTION if none).
 
 Examples:
-- Check health: (no params needed)`,
+- Ad-hoc probe: url="http://localhost:8090"
+- Named: instance="projA"
+- Implicit (one registered): (no params)`,
     HealthCheckInputSchema.shape,
     async (params: HealthCheckInput) => {
       try {
-        const pb = getClient();
+        if (params.instance && params.url) {
+          const err = createErrorResponse(
+            ErrorCodes.VALIDATION_ERROR,
+            'health_check: `instance` and `url` are mutually exclusive',
+            'Pass exactly one (or neither, to use the resolved connection).'
+          );
+          return {
+            content: [{ type: 'text', text: format(err, params.format as OutputFormat) }],
+            isError: true,
+          };
+        }
+
+        const pb = params.url
+          ? createTransientClient(params.url)
+          : resolveInstance(params.instance);
+
         const health = await pb.health.check();
-        
+
         const output = {
           status: health.code === 200 ? 'healthy' : 'unhealthy',
           code: health.code,
           message: health.message,
           data: health.data,
+          target: params.url ?? params.instance ?? '(resolved)',
         };
-        
+
         const text = format(output, params.format as OutputFormat);
-        
+
         return {
           content: [{ type: 'text', text }],
         };
       } catch (error) {
-        const errorResponse = handlePocketBaseError(error);
+        const errorResponse = handlePocketBaseError(error, params.url);
         return {
           content: [{ type: 'text', text: format(errorResponse, params.format as OutputFormat) }],
           isError: true,
@@ -84,8 +114,8 @@ Examples:
     ListLogsInputSchema.shape,
     async (params: ListLogsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.filter) options.filter = params.filter;
@@ -136,8 +166,8 @@ Examples:
     GetLogInputSchema.shape,
     async (params: GetLogInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const log = await pb.logs.getOne(params.id);
         
@@ -179,8 +209,8 @@ Examples:
     LogStatsInputSchema.shape,
     async (params: LogStatsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const options: Record<string, unknown> = {};
         if (params.filter) options.filter = params.filter;
@@ -221,8 +251,8 @@ Examples:
     ListBackupsInputSchema.shape,
     async (params: ListBackupsInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         const backups = await pb.backups.getFullList();
         
@@ -266,8 +296,8 @@ Examples:
     CreateBackupInputSchema.shape,
     async (params: CreateBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.create(params.name || '');
         
@@ -309,8 +339,8 @@ Examples:
     RestoreBackupInputSchema.shape,
     async (params: RestoreBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.restore(params.name);
         
@@ -350,8 +380,8 @@ Examples:
     DeleteBackupInputSchema.shape,
     async (params: DeleteBackupInput) => {
       try {
-        requireAdminAuth();
-        const pb = getClient();
+        requireAdminAuth(params.instance);
+        const pb = resolveInstance(params.instance);
         
         await pb.backups.delete(params.name);
         

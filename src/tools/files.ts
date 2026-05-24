@@ -2,7 +2,7 @@
  * File Tools - File URL generation and access
  */
 
-import { getClient, handlePocketBaseError } from '../services/pocketbase.js';
+import { resolveInstance, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
 import { GetFileUrlInputSchema, type GetFileUrlInput } from '../schemas/files.js';
 import type { OutputFormat } from '../types.js';
@@ -36,7 +36,7 @@ Examples:
     GetFileUrlInputSchema.shape,
     async (params: GetFileUrlInput) => {
       try {
-        const pb = getClient();
+        const pb = resolveInstance(params.instance);
         
         // Build the file URL
         // Format: /api/files/COLLECTION/RECORD_ID/FILENAME

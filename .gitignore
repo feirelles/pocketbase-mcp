@@ -28,6 +28,10 @@ specs/
 .DS_Store
 Thumbs.db
 
+# PocketBase runtime artifacts (SQLite WAL/SHM)
+pocketbase/pb_data/*.db-shm
+pocketbase/pb_data/*.db-wal
+
 # Logs
 *.log
 npm-debug.log*

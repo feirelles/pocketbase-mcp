@@ -32,11 +32,16 @@ function buildClient(url: string): PocketBase {
 }
 
 /**
- * Backward-compatibility shim. When no connections are registered and
- * `POCKETBASE_URL` is set, lazy-register it as 'default' (synchronously,
- * without a health check — matches the pre-2.0 behavior of `getClient()`).
+ * Lazy backward-compatibility: if no connections were registered explicitly
+ * and `POCKETBASE_URL` is set, register it as 'default' (no health check —
+ * preserves the pre-2.0 behavior where the env var was always trusted).
  *
- * Only runs once per process; subsequent invocations are no-ops.
+ * The startup wiring in index.ts also calls `registerConnection` for the
+ * env var with a real health check; this shim is the safety net for code
+ * paths that bypass the startup hook (tests, embedding the service in
+ * another runtime).
+ *
+ * One-shot per process; subsequent invocations are no-ops.
  */
 function maybeRegisterLegacyEnv(): void {
   if (legacyEnvAttempted || registry.size > 0) return;
@@ -165,15 +170,6 @@ export function resolveInstance(name?: string): PocketBase {
   return resolveInstanceEntry(name).client;
 }
 
-/**
- * @deprecated Use resolveInstance(name?). Kept as a shim during the
- * step-by-step migration; will be removed in step 5 of the multi-instance
- * refactor.
- */
-export function getClient(): PocketBase {
-  return resolveInstance(undefined);
-}
-
 /** Clear the registry. Testing only. */
 export function resetRegistry(): void {
   for (const entry of registry.values()) {
@@ -181,13 +177,6 @@ export function resetRegistry(): void {
   }
   registry.clear();
   legacyEnvAttempted = false;
-}
-
-/**
- * @deprecated Backward-compat alias for resetRegistry().
- */
-export function resetClient(): void {
-  resetRegistry();
 }
 
 /** Get current authentication state for a connection. */
