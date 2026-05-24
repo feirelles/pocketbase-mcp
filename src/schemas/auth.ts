@@ -3,10 +3,7 @@
  */
 
 import { z } from 'zod';
-
-/** Common output format parameter */
-const formatParam = z.enum(['toml', 'json']).default('toml')
-  .describe('Output format: toml (default, compact) or json');
+import { formatParam } from './common.js';
 
 /**
  * Input schema for admin authentication

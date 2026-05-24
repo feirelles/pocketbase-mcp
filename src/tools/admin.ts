@@ -2,64 +2,28 @@
  * Admin Tools - Health, Logs, Backups, Settings
  */
 
-import { z } from 'zod';
 import { getClient, requireAdminAuth, handlePocketBaseError } from '../services/pocketbase.js';
 import { format } from '../formatters/index.js';
+import {
+  HealthCheckInputSchema,
+  ListLogsInputSchema,
+  GetLogInputSchema,
+  LogStatsInputSchema,
+  ListBackupsInputSchema,
+  CreateBackupInputSchema,
+  RestoreBackupInputSchema,
+  DeleteBackupInputSchema,
+  type HealthCheckInput,
+  type ListLogsInput,
+  type GetLogInput,
+  type LogStatsInput,
+  type ListBackupsInput,
+  type CreateBackupInput,
+  type RestoreBackupInput,
+  type DeleteBackupInput,
+} from '../schemas/admin.js';
 import type { OutputFormat } from '../types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-// Schemas for admin tools
-const FormatSchema = z.enum(['toml', 'json']).default('toml');
-
-const HealthCheckInputSchema = z.object({
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const ListLogsInputSchema = z.object({
-  page: z.number().int().min(1).default(1).describe('Page number (1-indexed)'),
-  perPage: z.number().int().min(1).max(500).default(50).describe('Items per page'),
-  filter: z.string().optional().describe('Filter expression (e.g., level="error")'),
-  sort: z.string().optional().describe('Sort field(s), prefix with - for descending'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const GetLogInputSchema = z.object({
-  id: z.string().min(1).describe('Log entry ID'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const LogStatsInputSchema = z.object({
-  filter: z.string().optional().describe('Filter expression for stats'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const ListBackupsInputSchema = z.object({
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const CreateBackupInputSchema = z.object({
-  name: z.string().optional().describe('Backup file name (optional, auto-generated if not provided). Must be in format [a-z0-9_-].zip'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const RestoreBackupInputSchema = z.object({
-  name: z.string().min(1).describe('Backup file name to restore'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-const DeleteBackupInputSchema = z.object({
-  name: z.string().min(1).describe('Backup file name to delete'),
-  format: FormatSchema.describe('Output format: toml (default, compact) or json'),
-});
-
-type HealthCheckInput = z.infer<typeof HealthCheckInputSchema>;
-type ListLogsInput = z.infer<typeof ListLogsInputSchema>;
-type GetLogInput = z.infer<typeof GetLogInputSchema>;
-type LogStatsInput = z.infer<typeof LogStatsInputSchema>;
-type ListBackupsInput = z.infer<typeof ListBackupsInputSchema>;
-type CreateBackupInput = z.infer<typeof CreateBackupInputSchema>;
-type RestoreBackupInput = z.infer<typeof RestoreBackupInputSchema>;
-type DeleteBackupInput = z.infer<typeof DeleteBackupInputSchema>;
 
 /**
  * Register all admin tools with the MCP server
