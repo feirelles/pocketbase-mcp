@@ -248,6 +248,15 @@ describe('handlePocketBaseError', () => {
     expect(result.error.code).toBe('CONNECTION_ERROR');
     expect(result.error.message).toContain('http://example.test:8090');
   });
+
+  it('treats ClientResponseError status 0 as CONNECTION_ERROR (network unreachable)', () => {
+    // PB SDK wraps fetch failures as ClientResponseError with status 0.
+    const error = new ClientResponseError({ status: 0, data: {} });
+    const result = handlePocketBaseError(error, 'http://dead:65535');
+
+    expect(result.error.code).toBe('CONNECTION_ERROR');
+    expect(result.error.message).toContain('http://dead:65535');
+  });
 });
 
 describe('connection registry', () => {
