@@ -4,10 +4,12 @@ node_modules/
 # Build output
 dist/
 
-# Environment files
+# Environment files / secrets
 .env
 .env.local
 .env.*.local
+*.env
+.secrets/
 
 # IDE
 .vscode/
@@ -28,9 +30,8 @@ specs/
 .DS_Store
 Thumbs.db
 
-# PocketBase runtime artifacts (SQLite WAL/SHM)
-pocketbase/pb_data/*.db-shm
-pocketbase/pb_data/*.db-wal
+# PocketBase runtime data (local instance for integration tests)
+pocketbase/pb_data/
 
 # Logs
 *.log
@@ -42,3 +43,7 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Claude Code / tasks tooling
+.claude/worktrees/
+.veans.yml
